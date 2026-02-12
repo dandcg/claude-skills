@@ -16,9 +16,6 @@ ChromaDB-powered semantic search across a directory of markdown files. Find info
 ### [Email Archive](./email-archive/) - PST Processing
 .NET CLI tool for ingesting PST email archives into PostgreSQL with pgvector. Semantic search across historical emails, analytics (timelines, top contacts, activity patterns), and export to markdown.
 
-### [InstaImporter](./InstaImporter/) - Instagram Knowledge Extraction
-.NET tool that extracts factual knowledge from Instagram posts/reels shared via DMs. Uses GPT-4o for content analysis and Whisper for video transcription, then routes knowledge to a second brain repository.
-
 ## Installation
 
 Clone the repo and run the install script:
@@ -64,7 +61,6 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | Trello | `~/.trello/` | `trello/scripts/trello-setup.sh` |
 | Vector Search | None (local only) | `vector-search/setup.sh` |
 | Email Archive | `appsettings.*.json` / env vars | See README |
-| InstaImporter | `appsettings.*.json` / env vars | See README |
 
 ## Requirements
 
@@ -74,7 +70,6 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | Trello | jq, curl |
 | Vector Search | Python 3, pip |
 | Email Archive | .NET 10, PostgreSQL with pgvector |
-| InstaImporter | .NET 10 |
 
 ## License
 
