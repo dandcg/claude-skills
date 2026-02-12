@@ -1,0 +1,386 @@
+#!/usr/bin/env python3
+"""
+Query the vector search database.
+
+Usage:
+    # Similarity search
+    python query.py search "what investments does Dan have?"
+
+    # Search with filters
+    python query.py search "health routines" --area health --top-k 10
+
+    # List all indexed files
+    python query.py list
+
+    # Get stats about the database
+    python query.py stats
+
+    # Retrieve all chunks for a specific file
+    python query.py file "areas/finance/index.md"
+
+    # Retrieve chunks by area (for summarisation)
+    python query.py area finance --top-k 50
+
+    # Retrieve chunks by date range
+    python query.py date-range 2025-01-01 2025-12-31 --top-k 50
+"""
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+import chromadb
+
+
+def get_collection(db_path: Path):
+    """Get the brain collection from ChromaDB."""
+    if not db_path.exists():
+        print(f"Error: Database not found at {db_path}", file=sys.stderr)
+        print("Run ingest.py first to build the index.", file=sys.stderr)
+        sys.exit(1)
+
+    client = chromadb.PersistentClient(path=str(db_path))
+    try:
+        return client.get_collection("brain")
+    except Exception:
+        print("Error: 'brain' collection not found. Run ingest.py first.", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_search(collection, query: str, top_k: int = 10, area: str = None,
+               sub_area: str = None, output_format: str = "text"):
+    """Similarity search against the vector DB."""
+    where_filter = None
+    conditions = []
+    if area:
+        conditions.append({"area": area})
+    if sub_area:
+        conditions.append({"sub_area": sub_area})
+
+    if len(conditions) == 1:
+        where_filter = conditions[0]
+    elif len(conditions) > 1:
+        where_filter = {"$and": conditions}
+
+    results = collection.query(
+        query_texts=[query],
+        n_results=top_k,
+        where=where_filter,
+        include=["documents", "metadatas", "distances"],
+    )
+
+    if output_format == "json":
+        output = []
+        for i in range(len(results["ids"][0])):
+            output.append({
+                "id": results["ids"][0][i],
+                "distance": results["distances"][0][i],
+                "metadata": results["metadatas"][0][i],
+                "content": results["documents"][0][i],
+            })
+        print(json.dumps(output, indent=2))
+    else:
+        if not results["ids"][0]:
+            print("No results found.")
+            return
+
+        print(f"Query: {query}")
+        if where_filter:
+            print(f"Filter: {where_filter}")
+        print(f"Results: {len(results['ids'][0])}")
+        print("=" * 60)
+
+        seen_files = {}
+        for i in range(len(results["ids"][0])):
+            meta = results["metadatas"][0][i]
+            distance = results["distances"][0][i]
+            content = results["documents"][0][i]
+            file_path = meta["file_path"]
+
+            # Track which files appear and their best score
+            if file_path not in seen_files:
+                seen_files[file_path] = distance
+
+            similarity = 1 - distance  # cosine distance to similarity
+            print(f"\n--- Result {i+1} [similarity: {similarity:.3f}] ---")
+            print(f"File: {file_path}")
+            print(f"Title: {meta.get('title', 'N/A')}")
+            print(f"Area: {meta.get('area', 'N/A')}/{meta.get('sub_area', '')}")
+            if meta.get("date"):
+                print(f"Date: {meta['date']}")
+            print(f"Chunk: {meta.get('chunk_index', '?')}/{meta.get('chunk_count', '?')}")
+            print()
+            # Truncate long content for display
+            if len(content) > 500:
+                print(content[:500] + "...")
+            else:
+                print(content)
+
+        print("\n" + "=" * 60)
+        print(f"\nFiles referenced (by best match):")
+        for fp, dist in sorted(seen_files.items(), key=lambda x: x[1]):
+            print(f"  {1-dist:.3f}  {fp}")
+
+
+def cmd_area(collection, area: str, top_k: int = 50,
+             output_format: str = "text"):
+    """Retrieve all chunks for a given area."""
+    results = collection.get(
+        where={"area": area},
+        include=["documents", "metadatas"],
+        limit=top_k,
+    )
+
+    if output_format == "json":
+        output = []
+        for i in range(len(results["ids"])):
+            output.append({
+                "id": results["ids"][i],
+                "metadata": results["metadatas"][i],
+                "content": results["documents"][i],
+            })
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"Area: {area}")
+        print(f"Chunks: {len(results['ids'])}")
+        print("=" * 60)
+        for i in range(len(results["ids"])):
+            meta = results["metadatas"][i]
+            content = results["documents"][i]
+            print(f"\n--- {meta['file_path']} [chunk {meta.get('chunk_index', '?')}] ---")
+            if meta.get("title"):
+                print(f"Title: {meta['title']}")
+            print()
+            print(content)
+
+
+def cmd_file(collection, file_path: str, output_format: str = "text"):
+    """Retrieve all chunks for a specific file."""
+    results = collection.get(
+        where={"file_path": file_path},
+        include=["documents", "metadatas"],
+    )
+
+    if output_format == "json":
+        output = []
+        for i in range(len(results["ids"])):
+            output.append({
+                "id": results["ids"][i],
+                "metadata": results["metadatas"][i],
+                "content": results["documents"][i],
+            })
+        print(json.dumps(output, indent=2))
+    else:
+        if not results["ids"]:
+            print(f"No chunks found for: {file_path}")
+            return
+
+        print(f"File: {file_path}")
+        print(f"Chunks: {len(results['ids'])}")
+        print("=" * 60)
+
+        # Sort by chunk index
+        indexed = list(zip(results["ids"], results["documents"], results["metadatas"]))
+        indexed.sort(key=lambda x: x[2].get("chunk_index", 0))
+
+        for chunk_id, content, meta in indexed:
+            print(f"\n--- Chunk {meta.get('chunk_index', '?')}/{meta.get('chunk_count', '?')} ---")
+            print(content)
+
+
+def cmd_date_range(collection, start_date: str, end_date: str, top_k: int = 50,
+                   output_format: str = "text"):
+    """Retrieve chunks within a date range."""
+    results = collection.get(
+        where={
+            "$and": [
+                {"date": {"$gte": start_date}},
+                {"date": {"$lte": end_date}},
+            ]
+        },
+        include=["documents", "metadatas"],
+        limit=top_k,
+    )
+
+    if output_format == "json":
+        output = []
+        for i in range(len(results["ids"])):
+            output.append({
+                "id": results["ids"][i],
+                "metadata": results["metadatas"][i],
+                "content": results["documents"][i],
+            })
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"Date range: {start_date} to {end_date}")
+        print(f"Chunks: {len(results['ids'])}")
+        print("=" * 60)
+        for i in range(len(results["ids"])):
+            meta = results["metadatas"][i]
+            content = results["documents"][i]
+            print(f"\n--- {meta['file_path']} [{meta.get('date', 'no date')}] ---")
+            print(content)
+
+
+def cmd_list(collection, output_format: str = "text"):
+    """List all indexed files with metadata."""
+    results = collection.get(
+        include=["metadatas"],
+    )
+
+    # Aggregate by file
+    files = {}
+    for meta in results["metadatas"]:
+        fp = meta["file_path"]
+        if fp not in files:
+            files[fp] = {
+                "title": meta.get("title", ""),
+                "area": meta.get("area", ""),
+                "sub_area": meta.get("sub_area", ""),
+                "date": meta.get("date", ""),
+                "chunks": 0,
+            }
+        files[fp]["chunks"] += 1
+
+    if output_format == "json":
+        print(json.dumps(files, indent=2))
+    else:
+        print(f"Indexed files: {len(files)}")
+        print("=" * 60)
+        for fp in sorted(files.keys()):
+            info = files[fp]
+            print(f"  {fp}")
+            print(f"    Title: {info['title']} | Area: {info['area']}/{info['sub_area']} | "
+                  f"Chunks: {info['chunks']} | Date: {info['date']}")
+
+
+def cmd_stats(collection, output_format: str = "text"):
+    """Show database statistics."""
+    total_chunks = collection.count()
+
+    results = collection.get(include=["metadatas"])
+
+    # Aggregate stats
+    areas = {}
+    files = set()
+    dates = []
+    total_size = 0
+
+    for meta in results["metadatas"]:
+        area = meta.get("area", "unknown")
+        areas[area] = areas.get(area, 0) + 1
+        files.add(meta["file_path"])
+        if meta.get("date"):
+            dates.append(meta["date"])
+        total_size += meta.get("chunk_length", 0)
+
+    if output_format == "json":
+        print(json.dumps({
+            "total_chunks": total_chunks,
+            "total_files": len(files),
+            "total_content_size": total_size,
+            "areas": areas,
+            "date_range": {
+                "earliest": min(dates) if dates else None,
+                "latest": max(dates) if dates else None,
+            },
+        }, indent=2))
+    else:
+        print(f"=== Vector DB Stats ===")
+        print(f"Total chunks: {total_chunks}")
+        print(f"Total files: {len(files)}")
+        print(f"Total content: {total_size:,} characters")
+        if dates:
+            print(f"Date range: {min(dates)} to {max(dates)}")
+        print(f"\nChunks by area:")
+        for area in sorted(areas.keys()):
+            print(f"  {area}: {areas[area]}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Query the vector search database")
+    parser.add_argument(
+        "--db-path",
+        default=None,
+        help="Path to ChromaDB storage (default: auto-detect from cwd)",
+    )
+    parser.add_argument(
+        "--format", "-f",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # search
+    p_search = subparsers.add_parser("search", help="Similarity search")
+    p_search.add_argument("query", help="Search query")
+    p_search.add_argument("--top-k", "-k", type=int, default=10, help="Number of results")
+    p_search.add_argument("--area", help="Filter by area")
+    p_search.add_argument("--sub-area", help="Filter by sub-area")
+
+    # list
+    subparsers.add_parser("list", help="List indexed files")
+
+    # stats
+    subparsers.add_parser("stats", help="Show database statistics")
+
+    # file
+    p_file = subparsers.add_parser("file", help="Get chunks for a file")
+    p_file.add_argument("file_path", help="Relative file path")
+
+    # area
+    p_area = subparsers.add_parser("area", help="Get chunks by area")
+    p_area.add_argument("area_name", help="Area name (e.g., finance, health)")
+    p_area.add_argument("--top-k", "-k", type=int, default=50, help="Max chunks")
+
+    # date-range
+    p_date = subparsers.add_parser("date-range", help="Get chunks by date range")
+    p_date.add_argument("start_date", help="Start date (YYYY-MM-DD)")
+    p_date.add_argument("end_date", help="End date (YYYY-MM-DD)")
+    p_date.add_argument("--top-k", "-k", type=int, default=50, help="Max chunks")
+
+    args = parser.parse_args()
+
+    # Auto-detect DB path
+    if args.db_path:
+        db_path = Path(args.db_path)
+    else:
+        # Walk up from cwd to find .vectordb
+        cwd = Path.cwd()
+        db_path = cwd / ".vectordb"
+        if not db_path.exists():
+            # Try repo root detection via git
+            import subprocess
+            try:
+                result = subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    capture_output=True, text=True, check=True
+                )
+                db_path = Path(result.stdout.strip()) / ".vectordb"
+            except Exception:
+                pass
+
+    collection = get_collection(db_path)
+
+    if args.command == "search":
+        cmd_search(collection, args.query, args.top_k, args.area,
+                   getattr(args, "sub_area", None), args.format)
+    elif args.command == "list":
+        cmd_list(collection, args.format)
+    elif args.command == "stats":
+        cmd_stats(collection, args.format)
+    elif args.command == "file":
+        cmd_file(collection, args.file_path, args.format)
+    elif args.command == "area":
+        cmd_area(collection, args.area_name, args.top_k, args.format)
+    elif args.command == "date-range":
+        cmd_date_range(collection, args.start_date, args.end_date,
+                       args.top_k, args.format)
+
+
+if __name__ == "__main__":
+    main()

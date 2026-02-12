@@ -1,0 +1,38 @@
+# Virtual environments
+.venv/
+venv/
+__pycache__/
+
+# Credentials & secrets
+.env
+*.env.local
+appsettings.*.json
+!appsettings.json
+
+# Credential directories (never commit these)
+.outlook/
+.trello/
+
+# Vector database
+.vectordb/
+
+# .NET build artifacts
+bin/
+obj/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+
+# User-specific
+*.DotSettings.user
