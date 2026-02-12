@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello vector-search)
+AVAILABLE_SKILLS=(outlook trello vector-search pst-extract)
 
 # Colours
 GREEN='\033[0;32m'
@@ -71,12 +71,26 @@ check_deps_vector_search() {
     return 0
 }
 
+check_deps_pst_extract() {
+    if ! command -v python3 &>/dev/null; then
+        err "Missing dependency for pst-extract: python3"
+        return 1
+    fi
+    if ! command -v readpst &>/dev/null; then
+        warn "readpst not found (optional — needed if libratom fails)"
+        echo "    Ubuntu/Debian: sudo apt install pst-utils"
+        echo "    macOS: brew install libpst"
+    fi
+    return 0
+}
+
 check_deps() {
     local skill="$1"
     case "$skill" in
         outlook)        check_deps_outlook ;;
         trello)         check_deps_trello ;;
         vector-search)  check_deps_vector_search ;;
+        pst-extract)    check_deps_pst_extract ;;
         *)              return 0 ;;
     esac
 }
@@ -177,6 +191,21 @@ post_install() {
                 ok "Python venv already exists"
                 # Update deps quietly
                 "$REPO_DIR/vector-search/.venv/bin/pip" install -r "$REPO_DIR/vector-search/requirements.txt" -q 2>/dev/null || true
+            fi
+            ;;
+
+        pst-extract)
+            chmod +x "$REPO_DIR/pst-extract/setup.sh" 2>/dev/null || true
+            chmod +x "$REPO_DIR/pst-extract/scripts/extract_pst.py" 2>/dev/null || true
+
+            # Set up Python venv if needed
+            if [ ! -d "$REPO_DIR/pst-extract/.venv" ]; then
+                info "Setting up Python virtual environment..."
+                "$REPO_DIR/pst-extract/setup.sh"
+            else
+                ok "Python venv already exists"
+                # Update deps quietly
+                "$REPO_DIR/pst-extract/.venv/bin/pip" install -r "$REPO_DIR/pst-extract/requirements.txt" -q 2>/dev/null || true
             fi
             ;;
     esac
