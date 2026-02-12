@@ -1,0 +1,2 @@
+[console_scripts]
+email-archive = email_archive.cli:main
