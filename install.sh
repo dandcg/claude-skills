@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello vector-search pst-extract)
+AVAILABLE_SKILLS=(outlook trello vector-search pst-extract email-archive)
 
 # Colours
 GREEN='\033[0;32m'
@@ -84,6 +84,14 @@ check_deps_pst_extract() {
     return 0
 }
 
+check_deps_email_archive() {
+    if ! command -v python3 &>/dev/null; then
+        err "Missing dependency for email-archive: python3"
+        return 1
+    fi
+    return 0
+}
+
 check_deps() {
     local skill="$1"
     case "$skill" in
@@ -91,6 +99,7 @@ check_deps() {
         trello)         check_deps_trello ;;
         vector-search)  check_deps_vector_search ;;
         pst-extract)    check_deps_pst_extract ;;
+        email-archive)  check_deps_email_archive ;;
         *)              return 0 ;;
     esac
 }
@@ -206,6 +215,20 @@ post_install() {
                 ok "Python venv already exists"
                 # Update deps quietly
                 "$REPO_DIR/pst-extract/.venv/bin/pip" install -r "$REPO_DIR/pst-extract/requirements.txt" -q 2>/dev/null || true
+            fi
+            ;;
+
+        email-archive)
+            chmod +x "$REPO_DIR/email-archive/setup.sh" 2>/dev/null || true
+
+            # Set up Python venv if needed
+            if [ ! -d "$REPO_DIR/email-archive/.venv" ]; then
+                info "Setting up Python virtual environment..."
+                "$REPO_DIR/email-archive/setup.sh"
+            else
+                ok "Python venv already exists"
+                # Update deps quietly
+                "$REPO_DIR/email-archive/.venv/bin/pip" install -e "$REPO_DIR/email-archive" -q 2>/dev/null || true
             fi
             ;;
     esac
