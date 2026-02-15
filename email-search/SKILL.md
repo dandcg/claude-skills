@@ -1,9 +1,9 @@
 ---
-name: email-archive
+name: email-search
 description: Process email archives (PST files) into a searchable ChromaDB vector database with automatic semantic embeddings. Ingest, classify, search, analyse, and export to markdown. Trigger on phrases like "email archive", "ingest pst", "search emails", "email analytics", "export contacts", "email timeline".
 ---
 
-# Email Archive CLI
+# Email Search CLI
 
 Process email archives (PST files) into a searchable ChromaDB vector database with automatic semantic embeddings. Ingest, classify, search, analyse, and export to markdown.
 
@@ -16,21 +16,21 @@ Process email archives (PST files) into a searchable ChromaDB vector database wi
 
 ```bash
 # Set up Python environment (one-time)
-~/.claude/skills/email-archive/setup.sh
+~/.claude/skills/email-search/setup.sh
 ```
 
 ## Usage
 
-All commands use the `email-archive` CLI, which should be run from the skill's virtual environment:
+All commands use the `email-search` CLI, which should be run from the skill's virtual environment:
 
 ```bash
-~/.claude/skills/email-archive/.venv/bin/email-archive <command>
+~/.claude/skills/email-search/.venv/bin/email-search <command>
 ```
 
 ### Ingest a PST file
 
 ```bash
-email-archive ingest /path/to/archive.pst
+email-search ingest /path/to/archive.pst
 ```
 
 Emails are classified into three tiers:
@@ -41,41 +41,41 @@ Emails are classified into three tiers:
 ### Search emails
 
 ```bash
-email-archive search "budget meeting notes"
-email-archive search "project update" --from 2023-01-01 --to 2023-12-31
-email-archive search "invoice" --sender "accounting"
-email-archive search "contract terms" --emails-only
-email-archive search "spreadsheet data" --attachments-only --limit 5
+email-search search "budget meeting notes"
+email-search search "project update" --from 2023-01-01 --to 2023-12-31
+email-search search "invoice" --sender "accounting"
+email-search search "contract terms" --emails-only
+email-search search "spreadsheet data" --attachments-only --limit 5
 ```
 
 ### Analytics
 
 ```bash
-email-archive analytics summary
-email-archive analytics timeline
-email-archive analytics timeline --monthly --year 2020
-email-archive analytics contacts --limit 50
+email-search analytics summary
+email-search analytics timeline
+email-search analytics timeline --monthly --year 2020
+email-search analytics contacts --limit 50
 ```
 
 ### Export to markdown
 
 ```bash
-email-archive export contacts -o areas/relationships/email-contacts.md
-email-archive export review -p week -d 2023-01-15
-email-archive export review -p month -o reviews/monthly/2023-01-email.md
+email-search export contacts -o areas/relationships/email-contacts.md
+email-search export review -p week -d 2023-01-15
+email-search export review -p month -o reviews/monthly/2023-01-email.md
 ```
 
 ### Status
 
 ```bash
-email-archive status
+email-search status
 ```
 
 ## Configuration
 
 ```bash
-# Default data directory: ./email-archive-data
-export EMAIL_ARCHIVE_DATA_DIR="/path/to/data"
+# Default data directory: ./email-search-data
+export EMAIL_SEARCH_DATA_DIR="/path/to/data"
 ```
 
 ## Key Details

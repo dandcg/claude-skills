@@ -10,11 +10,14 @@ Microsoft 365 email and calendar via Microsoft Graph API. Read inbox, send email
 ### [Trello](./trello/) - Board Management
 Trello boards, lists, and cards via the REST API. List boards, create/update/move/archive cards, add comments, manage positions, and smart-sort cards by category.
 
-### [Vector Search](./vector-search/) - Semantic Search
+### [Repo Search](./repo-search/) - Semantic Search
 ChromaDB-powered semantic search across a directory of markdown files. Find information by meaning rather than keywords, filter by area or date range, and build summaries from relevant chunks. Great for personal knowledge bases / second brains.
 
-### [Email Archive](./email-archive/) - PST Processing
-.NET CLI tool for ingesting PST email archives into PostgreSQL with pgvector. Semantic search across historical emails, analytics (timelines, top contacts, activity patterns), and export to markdown.
+### [PST to Markdown](./pst-to-markdown/) - PST Extraction
+Python tool for extracting Outlook PST files into organised markdown archives with integrity verification. Supports full and incremental extraction, attachment handling, and produces a searchable directory of emails with YAML frontmatter. Pairs well with Repo Search for semantic search across extracted archives.
+
+### [Email Search](./email-search/) - Email Archive & Search
+Python CLI tool for ingesting PST email archives into ChromaDB with automatic semantic embeddings. Search, analytics (timelines, top contacts, activity patterns), and export to markdown.
 
 ## Installation
 
@@ -59,8 +62,9 @@ No secrets are stored in this repo. Each skill externalises credentials:
 |-------|-------------------|-------|
 | Outlook | `~/.outlook/` | `outlook/scripts/outlook-setup.sh` |
 | Trello | `~/.trello/` | `trello/scripts/trello-setup.sh` |
-| Vector Search | None (local only) | `vector-search/setup.sh` |
-| Email Archive | `appsettings.*.json` / env vars | See README |
+| Repo Search | None (local only) | `repo-search/setup.sh` |
+| PST to Markdown | None (local only) | `pst-to-markdown/setup.sh` |
+| Email Search | None (local only) | `email-search/setup.sh` |
 
 ## Requirements
 
@@ -68,8 +72,9 @@ No secrets are stored in this repo. Each skill externalises credentials:
 |-------|-------------|
 | Outlook | azure-cli, jq, curl, pandoc (optional) |
 | Trello | jq, curl |
-| Vector Search | Python 3, pip |
-| Email Archive | .NET 10, PostgreSQL with pgvector |
+| Repo Search | Python 3, pip |
+| PST to Markdown | Python 3, pip, readpst (optional fallback) |
+| Email Search | Python 3, pip |
 
 ## License
 

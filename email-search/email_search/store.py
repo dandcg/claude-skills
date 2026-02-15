@@ -18,7 +18,7 @@ import chromadb
 from .models import Attachment, Email, Tier
 
 # Default data directory (relative to working directory)
-DEFAULT_DATA_DIR = "./email-archive-data"
+DEFAULT_DATA_DIR = "./email-search-data"
 
 
 @dataclass

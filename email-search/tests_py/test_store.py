@@ -6,8 +6,8 @@ from datetime import datetime
 
 import pytest
 
-from email_archive.models import Attachment, Email, Tier
-from email_archive.store import Store
+from email_search.models import Attachment, Email, Tier
+from email_search.store import Store
 
 
 @pytest.fixture

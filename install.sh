@@ -5,7 +5,7 @@
 #   ./install.sh              # Install all skills (interactive)
 #   ./install.sh --all        # Install all skills (no prompts)
 #   ./install.sh outlook      # Install specific skill(s)
-#   ./install.sh trello vector-search
+#   ./install.sh trello repo-search
 #
 # Skills are symlinked into ~/.claude/skills/ so edits to this repo
 # are immediately available to Claude Code — no re-install needed.
@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello vector-search pst-extract email-archive)
+AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search)
 
 # Colours
 GREEN='\033[0;32m'
@@ -63,17 +63,17 @@ check_deps_trello() {
     return 0
 }
 
-check_deps_vector_search() {
+check_deps_repo_search() {
     if ! command -v python3 &>/dev/null; then
-        err "Missing dependency for vector-search: python3"
+        err "Missing dependency for repo-search: python3"
         return 1
     fi
     return 0
 }
 
-check_deps_pst_extract() {
+check_deps_pst_to_markdown() {
     if ! command -v python3 &>/dev/null; then
-        err "Missing dependency for pst-extract: python3"
+        err "Missing dependency for pst-to-markdown: python3"
         return 1
     fi
     if ! command -v readpst &>/dev/null; then
@@ -84,9 +84,9 @@ check_deps_pst_extract() {
     return 0
 }
 
-check_deps_email_archive() {
+check_deps_email_search() {
     if ! command -v python3 &>/dev/null; then
-        err "Missing dependency for email-archive: python3"
+        err "Missing dependency for email-search: python3"
         return 1
     fi
     return 0
@@ -97,9 +97,9 @@ check_deps() {
     case "$skill" in
         outlook)        check_deps_outlook ;;
         trello)         check_deps_trello ;;
-        vector-search)  check_deps_vector_search ;;
-        pst-extract)    check_deps_pst_extract ;;
-        email-archive)  check_deps_email_archive ;;
+        repo-search)    check_deps_repo_search ;;
+        pst-to-markdown) check_deps_pst_to_markdown ;;
+        email-search)   check_deps_email_search ;;
         *)              return 0 ;;
     esac
 }
@@ -187,48 +187,48 @@ post_install() {
             fi
             ;;
 
-        vector-search)
-            chmod +x "$REPO_DIR/vector-search/setup.sh" 2>/dev/null || true
-            chmod +x "$REPO_DIR/vector-search/ingest.py" 2>/dev/null || true
-            chmod +x "$REPO_DIR/vector-search/query.py" 2>/dev/null || true
+        repo-search)
+            chmod +x "$REPO_DIR/repo-search/setup.sh" 2>/dev/null || true
+            chmod +x "$REPO_DIR/repo-search/ingest.py" 2>/dev/null || true
+            chmod +x "$REPO_DIR/repo-search/query.py" 2>/dev/null || true
 
             # Set up Python venv if needed
-            if [ ! -d "$REPO_DIR/vector-search/.venv" ]; then
+            if [ ! -d "$REPO_DIR/repo-search/.venv" ]; then
                 info "Setting up Python virtual environment..."
-                "$REPO_DIR/vector-search/setup.sh"
+                "$REPO_DIR/repo-search/setup.sh"
             else
                 ok "Python venv already exists"
                 # Update deps quietly
-                "$REPO_DIR/vector-search/.venv/bin/pip" install -r "$REPO_DIR/vector-search/requirements.txt" -q 2>/dev/null || true
+                "$REPO_DIR/repo-search/.venv/bin/pip" install -r "$REPO_DIR/repo-search/requirements.txt" -q 2>/dev/null || true
             fi
             ;;
 
-        pst-extract)
-            chmod +x "$REPO_DIR/pst-extract/setup.sh" 2>/dev/null || true
-            chmod +x "$REPO_DIR/pst-extract/scripts/extract_pst.py" 2>/dev/null || true
+        pst-to-markdown)
+            chmod +x "$REPO_DIR/pst-to-markdown/setup.sh" 2>/dev/null || true
+            chmod +x "$REPO_DIR/pst-to-markdown/scripts/extract_pst.py" 2>/dev/null || true
 
             # Set up Python venv if needed
-            if [ ! -d "$REPO_DIR/pst-extract/.venv" ]; then
+            if [ ! -d "$REPO_DIR/pst-to-markdown/.venv" ]; then
                 info "Setting up Python virtual environment..."
-                "$REPO_DIR/pst-extract/setup.sh"
+                "$REPO_DIR/pst-to-markdown/setup.sh"
             else
                 ok "Python venv already exists"
                 # Update deps quietly
-                "$REPO_DIR/pst-extract/.venv/bin/pip" install -r "$REPO_DIR/pst-extract/requirements.txt" -q 2>/dev/null || true
+                "$REPO_DIR/pst-to-markdown/.venv/bin/pip" install -r "$REPO_DIR/pst-to-markdown/requirements.txt" -q 2>/dev/null || true
             fi
             ;;
 
-        email-archive)
-            chmod +x "$REPO_DIR/email-archive/setup.sh" 2>/dev/null || true
+        email-search)
+            chmod +x "$REPO_DIR/email-search/setup.sh" 2>/dev/null || true
 
             # Set up Python venv if needed
-            if [ ! -d "$REPO_DIR/email-archive/.venv" ]; then
+            if [ ! -d "$REPO_DIR/email-search/.venv" ]; then
                 info "Setting up Python virtual environment..."
-                "$REPO_DIR/email-archive/setup.sh"
+                "$REPO_DIR/email-search/setup.sh"
             else
                 ok "Python venv already exists"
                 # Update deps quietly
-                "$REPO_DIR/email-archive/.venv/bin/pip" install -e "$REPO_DIR/email-archive" -q 2>/dev/null || true
+                "$REPO_DIR/email-search/.venv/bin/pip" install -e "$REPO_DIR/email-search" -q 2>/dev/null || true
             fi
             ;;
     esac

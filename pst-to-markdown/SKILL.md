@@ -1,5 +1,5 @@
 ---
-name: pst-extract
+name: pst-to-markdown
 description: Extract emails from Outlook PST files into organised markdown archives. Use when needing to convert PST files to markdown, extract email archives, process Outlook exports, or create searchable email collections. Trigger on phrases like "extract pst", "convert pst", "pst to markdown", "email archive", "extract outlook".
 ---
 
@@ -16,7 +16,7 @@ Extract emails from Outlook PST files into an organised, integrity-verified arch
 
 ```bash
 # Set up Python environment (one-time)
-~/.claude/skills/pst-extract/setup.sh
+~/.claude/skills/pst-to-markdown/setup.sh
 ```
 
 ### System Dependencies (optional fallback)
@@ -39,19 +39,19 @@ Extract all emails from a PST file into markdown:
 
 ```bash
 # Basic extraction
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/
 
 # Verbose output with progress
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --verbose
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --verbose
 
 # Include deleted items
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --include-deleted --verbose
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --include-deleted --verbose
 
 # Set timezone for date display
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --timezone "Europe/London"
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --timezone "Europe/London"
 
 # Fix MAILER-DAEMON sent items (provide the PST owner's email)
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --owner-email "user@example.com"
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --owner-email "user@example.com"
 ```
 
 ### Incremental Extraction (Append Mode)
@@ -59,7 +59,7 @@ Extract all emails from a PST file into markdown:
 Add only new emails (skips already-extracted messages by Message-ID):
 
 ```bash
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --append --verbose
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/file.pst /path/to/output/ --append --verbose
 ```
 
 ### Extract from Pre-Extracted .eml Directory
@@ -67,7 +67,7 @@ Add only new emails (skips already-extracted messages by Message-ID):
 If emails were already extracted with readpst elsewhere, point at the directory:
 
 ```bash
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py /path/to/eml-directory/ /path/to/output/
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py /path/to/eml-directory/ /path/to/output/
 ```
 
 ## Output Structure
@@ -138,21 +138,21 @@ To verify: `sha256sum -c manifest.sha256`
 
 ## Workflow: Extract and Search
 
-For large archives, combine with the vector-search skill:
+For large archives, combine with the repo-search skill:
 
 1. Extract PST to markdown with this skill
-2. Index the output with vector-search ingest
+2. Index the output with repo-search ingest
 3. Semantic search across all emails
 
 ```bash
 # Step 1: Extract
-~/.claude/skills/pst-extract/.venv/bin/python ~/.claude/skills/pst-extract/scripts/extract_pst.py archive.pst ./email-output/ --verbose
+~/.claude/skills/pst-to-markdown/.venv/bin/python ~/.claude/skills/pst-to-markdown/scripts/extract_pst.py archive.pst ./email-output/ --verbose
 
-# Step 2: Index for search (uses vector-search skill)
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/ingest.py ./email-output/ --verbose
+# Step 2: Index for search (uses repo-search skill)
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/ingest.py ./email-output/ --verbose
 
 # Step 3: Search
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path ./email-output/.vectordb search "settlement agreement"
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path ./email-output/.vectordb search "settlement agreement"
 ```
 
 ## Error Handling

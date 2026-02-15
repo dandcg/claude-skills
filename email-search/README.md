@@ -1,4 +1,4 @@
-# Email Archive CLI
+# Email Search CLI
 
 Process email archives (PST files) into a searchable ChromaDB vector database with automatic semantic embeddings. Ingest, classify, search, analyse, and export to markdown.
 
@@ -20,7 +20,7 @@ That's it. No PostgreSQL, no OpenAI API key, no Docker. ChromaDB runs embedded w
 ## Installation
 
 ```bash
-cd email-archive
+cd email-search
 pip install -e .
 ```
 
@@ -33,13 +33,13 @@ pip install -e ".[dev]"
 
 ```bash
 # 1. Ingest a PST file (auto-embeds Tier 3 emails)
-email-archive ingest /path/to/archive.pst
+email-search ingest /path/to/archive.pst
 
 # 2. Check what was imported
-email-archive status
+email-search status
 
 # 3. Search (no separate embed step needed!)
-email-archive search "budget meeting notes"
+email-search search "budget meeting notes"
 ```
 
 ## Configuration
@@ -47,8 +47,8 @@ email-archive search "budget meeting notes"
 The only configuration is the data directory for ChromaDB storage:
 
 ```bash
-# Default: ./email-archive-data
-export EMAIL_ARCHIVE_DATA_DIR="/path/to/data"
+# Default: ./email-search-data
+export EMAIL_SEARCH_DATA_DIR="/path/to/data"
 ```
 
 ## Commands
@@ -80,11 +80,11 @@ Show counts of emails by tier, embedding status, and attachment statistics.
 Search emails and attachments using natural language queries.
 
 ```bash
-email-archive search "budget meeting notes"
-email-archive search "project update" --from 2023-01-01 --to 2023-12-31
-email-archive search "invoice" --sender "accounting"
-email-archive search "contract terms" --emails-only
-email-archive search "spreadsheet data" --attachments-only --limit 5
+email-search search "budget meeting notes"
+email-search search "project update" --from 2023-01-01 --to 2023-12-31
+email-search search "invoice" --sender "accounting"
+email-search search "contract terms" --emails-only
+email-search search "spreadsheet data" --attachments-only --limit 5
 ```
 
 | Option | Description |
@@ -101,10 +101,10 @@ email-archive search "spreadsheet data" --attachments-only --limit 5
 Analyse email patterns and statistics.
 
 ```bash
-email-archive analytics summary
-email-archive analytics timeline
-email-archive analytics timeline --monthly --year 2020
-email-archive analytics contacts --limit 50
+email-search analytics summary
+email-search analytics timeline
+email-search analytics timeline --monthly --year 2020
+email-search analytics contacts --limit 50
 ```
 
 | Subcommand | Description |
@@ -118,10 +118,10 @@ email-archive analytics contacts --limit 50
 Export email data to second brain markdown files.
 
 ```bash
-email-archive export contacts -o areas/relationships/email-contacts.md
-email-archive export contacts -n 10 --min-emails 10
-email-archive export review -p week -d 2023-01-15
-email-archive export review -p month -o reviews/monthly/2023-01-email.md
+email-search export contacts -o areas/relationships/email-contacts.md
+email-search export contacts -n 10 --min-emails 10
+email-search export review -p week -d 2023-01-15
+email-search export review -p month -o reviews/monthly/2023-01-email.md
 ```
 
 | Subcommand | Options | Description |
@@ -132,7 +132,7 @@ email-archive export review -p month -o reviews/monthly/2023-01-email.md
 ## Architecture
 
 ```
-email_archive/
+email_search/
 ├── cli.py                  # Click CLI commands
 ├── models.py               # Email, Attachment, Tier dataclasses
 ├── store.py                # ChromaDB storage (replaces PostgreSQL + pgvector)
@@ -160,7 +160,7 @@ email_archive/
 python3 -m pytest tests_py/ -v
 
 # Run tests with coverage
-python3 -m pytest tests_py/ --cov=email_archive --cov-report=term-missing
+python3 -m pytest tests_py/ --cov=email_search --cov-report=term-missing
 ```
 
 ## Troubleshooting
@@ -171,7 +171,7 @@ python3 -m pytest tests_py/ --cov=email_archive --cov-report=term-missing
 - Corrupted PST files may partially parse (successful emails are still stored)
 
 ### ChromaDB data location
-Data is stored in `./email-archive-data/` by default. Set `EMAIL_ARCHIVE_DATA_DIR` to change.
+Data is stored in `./email-search-data/` by default. Set `EMAIL_SEARCH_DATA_DIR` to change.
 
 ### First search is slow
 ChromaDB downloads the all-MiniLM-L6-v2 model on first use (~80MB). Subsequent runs use the cached model.

@@ -1,9 +1,9 @@
 ---
-name: vector-search
+name: repo-search
 description: Semantic search and summarisation across a markdown corpus. Use when needing to find information across many files, build timelines, aggregate knowledge, or answer questions about content. Trigger on phrases like "search brain", "find in my notes", "what do I know about", "summarise", "timeline of", "aggregate".
 ---
 
-# Vector Search & Summarisation
+# Repo Search & Summarisation
 
 Semantic search across a directory of markdown files using ChromaDB vector embeddings. Retrieves relevant chunks without loading entire files into context. Designed for use with a "second brain" or personal knowledge base, but works with any collection of markdown files.
 
@@ -16,20 +16,20 @@ Semantic search across a directory of markdown files using ChromaDB vector embed
 
 ```bash
 # Set up Python environment (one-time)
-~/.claude/skills/vector-search/setup.sh
+~/.claude/skills/repo-search/setup.sh
 
 # Build the index (run from brain repo root)
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/ingest.py /path/to/your/markdown-repo --verbose
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/ingest.py /path/to/your/markdown-repo --verbose
 ```
 
 ### Rebuild Index (after adding/changing files)
 
 ```bash
 # Incremental update (only changed files)
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/ingest.py /path/to/your/markdown-repo
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/ingest.py /path/to/your/markdown-repo
 
 # Full rebuild
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/ingest.py /path/to/your/markdown-repo --force --verbose
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/ingest.py /path/to/your/markdown-repo --force --verbose
 ```
 
 ## Search Operations
@@ -40,16 +40,16 @@ Find content semantically related to a query:
 
 ```bash
 # Basic search (returns top 10 chunks)
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text here"
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text here"
 
 # More results
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text here" -k 20
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text here" -k 20
 
 # Filter by area
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text" --area finance
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb search "query text" --area finance
 
 # JSON output (for programmatic use)
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb -f json search "query text" -k 5
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb -f json search "query text" -k 5
 ```
 
 ### Browse by Area
@@ -57,8 +57,8 @@ Find content semantically related to a query:
 Retrieve all chunks for an area (useful for summarisation):
 
 ```bash
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb area finance
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb area health -k 100
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb area finance
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb area health -k 100
 ```
 
 ### Browse by File
@@ -66,7 +66,7 @@ Retrieve all chunks for an area (useful for summarisation):
 Get all chunks for a specific file:
 
 ```bash
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb file "areas/finance/index.md"
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb file "areas/finance/index.md"
 ```
 
 ### Date Range Query
@@ -74,17 +74,17 @@ Get all chunks for a specific file:
 Retrieve chunks within a date range (for timelines):
 
 ```bash
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb date-range 2025-01-01 2025-12-31
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb date-range 2025-01-01 2025-12-31
 ```
 
 ### Database Info
 
 ```bash
 # Statistics
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb stats
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb stats
 
 # List all indexed files
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb list
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb list
 ```
 
 ## Summarisation Workflow
@@ -99,7 +99,7 @@ For large aggregation tasks (timelines, domain summaries, cross-cutting analysis
 Example workflow for "summarise my financial position":
 ```bash
 # Step 1: Get all finance chunks as JSON
-~/.claude/skills/vector-search/.venv/bin/python ~/.claude/skills/vector-search/query.py --db-path /path/to/your/markdown-repo/.vectordb -f json area finance -k 100
+~/.claude/skills/repo-search/.venv/bin/python ~/.claude/skills/repo-search/query.py --db-path /path/to/your/markdown-repo/.vectordb -f json area finance -k 100
 
 # Step 2: Read the JSON output and synthesise with Claude
 # (Claude does this step naturally after reading the chunks)

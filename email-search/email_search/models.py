@@ -1,4 +1,4 @@
-"""Data models for email archive."""
+"""Data models for email search."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# Vector Search & Summarisation
+# Repo Search & Summarisation
 
 Semantic search across a directory of markdown files using ChromaDB vector embeddings. Find information by meaning rather than keywords, filter by area or date range, and build summaries from relevant chunks.
 
@@ -20,7 +20,7 @@ Designed for use with a "second brain" or personal knowledge base, but works wit
 From the repo root:
 
 ```bash
-./install.sh vector-search
+./install.sh repo-search
 ```
 
 This installs the skill and sets up the Python virtual environment automatically.
@@ -30,8 +30,8 @@ This installs the skill and sets up the Python virtual environment automatically
 Point the ingestion script at your markdown directory:
 
 ```bash
-~/.claude/skills/vector-search/.venv/bin/python \
-  ~/.claude/skills/vector-search/ingest.py \
+~/.claude/skills/repo-search/.venv/bin/python \
+  ~/.claude/skills/repo-search/ingest.py \
   /path/to/your/markdown-repo --verbose
 ```
 
@@ -40,8 +40,8 @@ The database is stored in `/path/to/your/markdown-repo/.vectordb/`.
 ### 3. Search
 
 ```bash
-~/.claude/skills/vector-search/.venv/bin/python \
-  ~/.claude/skills/vector-search/query.py \
+~/.claude/skills/repo-search/.venv/bin/python \
+  ~/.claude/skills/repo-search/query.py \
   --db-path /path/to/your/markdown-repo/.vectordb \
   search "your query here"
 ```
@@ -158,7 +158,7 @@ These can be adjusted in `ingest.py` constants.
 ## File Structure
 
 ```
-~/.claude/skills/vector-search/
+~/.claude/skills/repo-search/
 ├── SKILL.md            # Skill definition
 ├── ingest.py           # Index builder
 ├── query.py            # Search interface
@@ -196,7 +196,7 @@ Re-run ingestion to pick up new or changed files. Incremental mode only processe
 
 ```bash
 # Remove skill
-rm -rf ~/.claude/skills/vector-search
+rm -rf ~/.claude/skills/repo-search
 
 # Remove vector database (in your markdown repo)
 rm -rf /path/to/your/markdown-repo/.vectordb

@@ -19,7 +19,7 @@ from .store import Store
 
 console = Console()
 
-DEFAULT_DATA_DIR = os.environ.get("EMAIL_ARCHIVE_DATA_DIR", "./email-archive-data")
+DEFAULT_DATA_DIR = os.environ.get("EMAIL_SEARCH_DATA_DIR", "./email-search-data")
 
 
 def _get_store() -> Store:

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from email_archive.models import Attachment, Email, Tier
+from email_search.models import Attachment, Email, Tier
 
 
 def test_email_body_word_count():

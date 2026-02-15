@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from email_archive.email_filter import classify
-from email_archive.models import Email, Tier
+from email_search.email_filter import classify
+from email_search.models import Email, Tier
 
 
 def _make_email(

@@ -1,12 +1,12 @@
 #!/bin/bash
-# Install vector-search skill to ~/.claude/skills/vector-search
-# Run from the tools/vector-search directory
+# Install repo-search skill to ~/.claude/skills/repo-search
+# Run from the tools/repo-search directory
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="$HOME/.claude/skills/vector-search"
+TARGET_DIR="$HOME/.claude/skills/repo-search"
 
-echo "=== Vector Search Skill Installer ==="
+echo "=== Repo Search Skill Installer ==="
 echo
 
 # Check dependencies

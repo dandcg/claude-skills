@@ -1,6 +1,6 @@
 """Tests for attachment text extraction."""
 
-from email_archive.attachment_extractor import can_extract, extract_text, get_mime_type
+from email_search.attachment_extractor import can_extract, extract_text, get_mime_type
 
 
 class TestCanExtract:

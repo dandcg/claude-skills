@@ -2,12 +2,12 @@
 
 from datetime import datetime
 
-from email_archive.markdown_formatter import (
+from email_search.markdown_formatter import (
     format_contact_section,
     format_ideas_header,
     format_review_email_section,
 )
-from email_archive.store import ContactExport, ReviewPeriodExport
+from email_search.store import ContactExport, ReviewPeriodExport
 
 
 def test_format_contact_section():

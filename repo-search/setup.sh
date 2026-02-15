@@ -1,11 +1,11 @@
 #!/bin/bash
-# Set up Python virtual environment for vector-search skill
+# Set up Python virtual environment for repo-search skill
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="$SCRIPT_DIR/.venv"
 
-echo "=== Vector Search Setup ==="
+echo "=== Repo Search Setup ==="
 
 # Check Python
 if ! command -v python3 &> /dev/null; then

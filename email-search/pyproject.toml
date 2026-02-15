@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "email-archive"
+name = "email-search"
 version = "2.0.0"
 description = "Process email archives (PST files) into a searchable ChromaDB vector database"
 requires-python = ">=3.11"
@@ -24,10 +24,10 @@ dev = [
 ]
 
 [project.scripts]
-email-archive = "email_archive.cli:main"
+email-search = "email_search.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["email_archive*"]
+include = ["email_search*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests_py"]

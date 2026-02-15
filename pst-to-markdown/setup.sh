@@ -1,10 +1,10 @@
 #!/bin/bash
-# Set up Python virtual environment for pst-extract skill
+# Set up Python virtual environment for pst-to-markdown skill
 set -e
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "==> Setting up pst-extract Python environment..."
+echo "==> Setting up pst-to-markdown Python environment..."
 
 # Create venv if it doesn't exist
 if [ ! -d "$SKILL_DIR/.venv" ]; then
@@ -17,7 +17,7 @@ echo "Installing dependencies..."
 "$SKILL_DIR/.venv/bin/pip" install --upgrade pip -q
 "$SKILL_DIR/.venv/bin/pip" install -r "$SKILL_DIR/requirements.txt" -q
 
-echo "==> pst-extract environment ready"
+echo "==> pst-to-markdown environment ready"
 echo
 echo "Dependencies installed:"
 "$SKILL_DIR/.venv/bin/pip" list --format=columns 2>/dev/null | grep -iE "libratom|html2text|dateutil|tqdm" || true
