@@ -16,6 +16,7 @@ appsettings.*.json
 
 # Vector database
 .vectordb/
+email-archive-data/
 
 # .NET build artifacts
 bin/

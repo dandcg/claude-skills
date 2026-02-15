@@ -1,11 +1,11 @@
 ---
 name: repo-search
-description: Semantic search and summarisation across a markdown corpus. Use when needing to find information across many files, build timelines, aggregate knowledge, or answer questions about content. Trigger on phrases like "search brain", "find in my notes", "what do I know about", "summarise", "timeline of", "aggregate".
+description: Semantic search and summarisation across a document corpus (markdown, PDF, DOCX, XLSX). Use when needing to find information across many files, build timelines, aggregate knowledge, or answer questions about content. Trigger on phrases like "search brain", "find in my notes", "what do I know about", "summarise", "timeline of", "aggregate".
 ---
 
 # Repo Search & Summarisation
 
-Semantic search across a directory of markdown files using ChromaDB vector embeddings. Retrieves relevant chunks without loading entire files into context. Designed for use with a "second brain" or personal knowledge base, but works with any collection of markdown files.
+Semantic search across a directory of documents using ChromaDB vector embeddings. Supports **markdown**, **PDF**, **DOCX**, and **XLSX** files. Retrieves relevant chunks without loading entire files into context. Designed for use with a "second brain" or personal knowledge base, but works with any collection of documents.
 
 ## Prerequisites
 
@@ -122,3 +122,4 @@ The brain is organised into these areas:
 - **"No results"**: Try broader query terms, remove area filter, or increase -k
 - **Stale results**: Re-run ingest to pick up file changes (incremental, fast)
 - **Slow first query**: ChromaDB loads the embedding model on first use (~10-20s), subsequent queries are fast
+- **"Failed to extract"**: The file may be corrupted or password-protected; check stderr for details

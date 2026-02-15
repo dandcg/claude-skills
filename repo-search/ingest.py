@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Ingest markdown files into ChromaDB for vector search.
+Ingest files into ChromaDB for vector search.
 
 Usage:
     python ingest.py [REPO_ROOT] [--db-path PATH] [--dry-run] [--force] [--verbose]
 
-Scans for markdown files, chunks them, generates embeddings, and stores
-in a persistent ChromaDB database.
+Scans for supported files (markdown, PDF, DOCX, XLSX), extracts text,
+chunks them, generates embeddings, and stores in a persistent ChromaDB database.
 """
 
 import argparse
@@ -20,8 +20,14 @@ from datetime import datetime
 from pathlib import Path
 
 import chromadb
-from langchain_text_splitters import MarkdownTextSplitter
+from langchain_text_splitters import (
+    MarkdownTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 
+
+# Supported file extensions
+SUPPORTED_EXTENSIONS = {".md", ".pdf", ".docx", ".xlsx"}
 
 # Directories to skip during scanning
 SKIP_DIRS = {
@@ -37,75 +43,139 @@ DEFAULT_CHUNK_SIZE = 1000  # characters (~250 tokens)
 DEFAULT_CHUNK_OVERLAP = 200  # characters overlap between chunks
 
 
-def find_markdown_files(repo_root: Path) -> list[Path]:
-    """Find all markdown files in the repo, skipping excluded directories."""
-    md_files = []
-    for root, dirs, files in os.walk(repo_root):
+def find_files(repo_root: Path) -> list[Path]:
+    """Find all supported files in the repo, skipping excluded directories."""
+    files = []
+    for root, dirs, filenames in os.walk(repo_root):
         # Filter out skip directories in-place
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
-        for f in files:
-            if f.endswith(".md") and f not in SKIP_FILES:
-                md_files.append(Path(root) / f)
+        for f in filenames:
+            p = Path(root) / f
+            if p.suffix.lower() in SUPPORTED_EXTENSIONS and f not in SKIP_FILES:
+                files.append(p)
 
-    return sorted(md_files)
+    return sorted(files)
 
 
-def extract_metadata(file_path: Path, repo_root: Path) -> dict:
-    """Extract metadata from a markdown file's frontmatter and path."""
-    content = file_path.read_text(encoding="utf-8")
+def extract_text(file_path: Path) -> str:
+    """Extract plain text from a file based on its extension."""
+    ext = file_path.suffix.lower()
+
+    if ext == ".md":
+        return file_path.read_text(encoding="utf-8")
+    elif ext == ".pdf":
+        return _extract_pdf(file_path)
+    elif ext == ".docx":
+        return _extract_docx(file_path)
+    elif ext == ".xlsx":
+        return _extract_xlsx(file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
+
+
+def _extract_pdf(file_path: Path) -> str:
+    """Extract text from a PDF file."""
+    from pypdf import PdfReader
+
+    reader = PdfReader(file_path)
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            pages.append(text)
+    return "\n\n".join(pages)
+
+
+def _extract_docx(file_path: Path) -> str:
+    """Extract text from a Word DOCX file."""
+    from docx import Document
+
+    doc = Document(file_path)
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    return "\n\n".join(paragraphs)
+
+
+def _extract_xlsx(file_path: Path) -> str:
+    """Extract text from an Excel XLSX file."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(file_path, read_only=True, data_only=True)
+    parts = []
+    for sheet in wb.worksheets:
+        parts.append(f"Sheet: {sheet.title}")
+        for row in sheet.iter_rows(values_only=True):
+            cells = [str(c) if c is not None else "" for c in row]
+            if any(c for c in cells):
+                parts.append(" | ".join(cells))
+        parts.append("")
+    wb.close()
+    return "\n".join(parts)
+
+
+def extract_metadata(file_path: Path, repo_root: Path, content: str) -> dict:
+    """Extract metadata from a file's content and path."""
     rel_path = str(file_path.relative_to(repo_root))
+    ext = file_path.suffix.lower()
 
     # Determine area from path
     parts = rel_path.split("/")
     area = parts[0] if parts else "unknown"
     sub_area = parts[1] if len(parts) > 2 else ""
 
-    # Extract title from first H1
-    title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
-    title = title_match.group(1).strip() if title_match else file_path.stem
-
-    # Extract date from frontmatter or filename
+    title = file_path.stem
     date = ""
-    date_match = re.search(
-        r"\*\*(?:Added|Date|Started):\*\*\s*(\d{4}-\d{2}-\d{2})",
-        content
-    )
-    if date_match:
-        date = date_match.group(1)
-    else:
-        # Try filename date pattern (e.g., 2025-02-01-something.md)
+    status = ""
+
+    # Extract markdown-specific metadata
+    if ext == ".md":
+        title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
+        if title_match:
+            title = title_match.group(1).strip()
+
+        date_match = re.search(
+            r"\*\*(?:Added|Date|Started):\*\*\s*(\d{4}-\d{2}-\d{2})",
+            content
+        )
+        if date_match:
+            date = date_match.group(1)
+
+        status_match = re.search(r"\*\*Status:\*\*\s*(\w+)", content)
+        if status_match:
+            status = status_match.group(1)
+
+    # Try filename date pattern for all file types
+    if not date:
         fname_match = re.match(r"(\d{4}-\d{2}-\d{2})", file_path.name)
         if fname_match:
             date = fname_match.group(1)
 
-    # Extract status if present
-    status = ""
-    status_match = re.search(
-        r"\*\*Status:\*\*\s*(\w+)",
-        content
-    )
-    if status_match:
-        status = status_match.group(1)
-
     return {
         "file_path": rel_path,
+        "file_type": ext.lstrip("."),
         "area": area,
         "sub_area": sub_area,
         "title": title,
         "date": date,
         "status": status,
-        "file_size": len(content),
+        "file_size": file_path.stat().st_size,
     }
 
 
-def chunk_markdown(content: str, chunk_size: int = DEFAULT_CHUNK_SIZE,
-                   chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[str]:
-    """Split markdown content into chunks using markdown-aware splitter."""
-    splitter = MarkdownTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-    )
+def chunk_text(content: str, file_path: Path,
+               chunk_size: int = DEFAULT_CHUNK_SIZE,
+               chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[str]:
+    """Split content into chunks using appropriate splitter for file type."""
+    if file_path.suffix.lower() == ".md":
+        splitter = MarkdownTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    else:
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
     chunks = splitter.split_text(content)
     # Filter out very short chunks (less than 50 chars)
     return [c for c in chunks if len(c.strip()) >= 50]
@@ -143,14 +213,15 @@ def ingest(
     print(f"=== Vector Search Ingestion ===")
     print(f"Repo root: {repo_root}")
     print(f"DB path:   {db_path}")
+    print(f"Formats:   {', '.join(sorted(e.lstrip('.') for e in SUPPORTED_EXTENSIONS))}")
     print(f"Chunk size: {chunk_size} chars, overlap: {chunk_overlap} chars")
     print()
 
-    # Find all markdown files
-    md_files = find_markdown_files(repo_root)
-    print(f"Found {len(md_files)} markdown files")
+    # Find all supported files
+    all_files = find_files(repo_root)
+    print(f"Found {len(all_files)} files")
 
-    if not md_files:
+    if not all_files:
         print("No files to process")
         return
 
@@ -161,7 +232,7 @@ def ingest(
     # Determine which files need processing
     files_to_process = []
     files_unchanged = 0
-    for f in md_files:
+    for f in all_files:
         file_hash = compute_file_hash(f)
         rel_path = str(f.relative_to(repo_root))
         if not force and hash_cache.get(rel_path) == file_hash:
@@ -181,12 +252,18 @@ def ingest(
         print("=== DRY RUN — no changes made ===")
         total_chunks = 0
         for f, _ in files_to_process:
-            content = f.read_text(encoding="utf-8")
-            chunks = chunk_markdown(content, chunk_size, chunk_overlap)
+            try:
+                content = extract_text(f)
+            except Exception as e:
+                print(f"  WARNING: Failed to extract {f.name}: {e}",
+                      file=sys.stderr)
+                continue
+            chunks = chunk_text(content, f, chunk_size, chunk_overlap)
             total_chunks += len(chunks)
-            meta = extract_metadata(f, repo_root)
+            meta = extract_metadata(f, repo_root, content)
             print(f"  {meta['file_path']}: {len(chunks)} chunks, "
-                  f"area={meta['area']}, title={meta['title']}")
+                  f"type={meta['file_type']}, area={meta['area']}, "
+                  f"title={meta['title']}")
         print(f"\nTotal chunks: {total_chunks}")
         return
 
@@ -205,13 +282,23 @@ def ingest(
 
     # Process each file
     total_chunks = 0
+    skipped = 0
     start_time = time.time()
 
     for i, (f, file_hash) in enumerate(files_to_process, 1):
         rel_path = str(f.relative_to(repo_root))
-        content = f.read_text(encoding="utf-8")
-        metadata = extract_metadata(f, repo_root)
-        chunks = chunk_markdown(content, chunk_size, chunk_overlap)
+
+        # Extract text content
+        try:
+            content = extract_text(f)
+        except Exception as e:
+            print(f"  WARNING: Failed to extract {rel_path}: {e}",
+                  file=sys.stderr)
+            skipped += 1
+            continue
+
+        metadata = extract_metadata(f, repo_root, content)
+        chunks = chunk_text(content, f, chunk_size, chunk_overlap)
 
         if not chunks:
             if verbose:
@@ -266,7 +353,9 @@ def ingest(
     # Print summary
     print()
     print(f"=== Ingestion Complete ===")
-    print(f"Files processed: {len(files_to_process)}")
+    print(f"Files processed: {len(files_to_process) - skipped}")
+    if skipped:
+        print(f"Files skipped (extraction errors): {skipped}")
     print(f"Total chunks added: {total_chunks}")
     print(f"Total chunks in DB: {collection.count()}")
     print(f"Time: {elapsed:.1f}s")
@@ -274,7 +363,9 @@ def ingest(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest markdown files into vector DB")
+    parser = argparse.ArgumentParser(
+        description="Ingest files (markdown, PDF, DOCX, XLSX) into vector DB"
+    )
     parser.add_argument(
         "repo_root",
         nargs="?",
