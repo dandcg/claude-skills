@@ -35,8 +35,8 @@ from pathlib import Path
 import chromadb
 
 
-def get_collection(db_path: Path):
-    """Get the brain collection from ChromaDB."""
+def get_collection(db_path: Path, collection_name: str = "brain"):
+    """Get a named collection from ChromaDB."""
     if not db_path.exists():
         print(f"Error: Database not found at {db_path}", file=sys.stderr)
         print("Run ingest.py first to build the index.", file=sys.stderr)
@@ -44,9 +44,9 @@ def get_collection(db_path: Path):
 
     client = chromadb.PersistentClient(path=str(db_path))
     try:
-        return client.get_collection("brain")
+        return client.get_collection(collection_name)
     except Exception:
-        print("Error: 'brain' collection not found. Run ingest.py first.", file=sys.stderr)
+        print(f"Error: '{collection_name}' collection not found. Run ingest.py first.", file=sys.stderr)
         sys.exit(1)
 
 
@@ -300,9 +300,33 @@ def cmd_stats(collection, output_format: str = "text"):
             print(f"  {area}: {areas[area]}")
 
 
-def _load_bm25(db_path: Path):
+def cmd_prune(collection, repo_root: Path, output_format: str = "text") -> int:
+    """Remove chunks for files that no longer exist on disk."""
+    results = collection.get(include=["metadatas"])
+    file_paths = {m["file_path"] for m in results["metadatas"]}
+
+    removed = 0
+    for fp in file_paths:
+        full_path = repo_root / fp
+        if not full_path.exists():
+            chunks = collection.get(where={"file_path": fp})
+            if chunks["ids"]:
+                collection.delete(ids=chunks["ids"])
+                removed += len(chunks["ids"])
+                if output_format == "text":
+                    print(f"  Pruned {len(chunks['ids'])} chunks: {fp}")
+
+    if output_format == "text":
+        print(f"\nTotal pruned: {removed} chunks")
+    return removed
+
+
+def _load_bm25(db_path: Path, collection_name: str = "brain"):
     """Load the BM25 index from disk."""
-    bm25_path = db_path / "bm25_index.pkl"
+    # Try collection-specific path first, fall back to legacy path
+    bm25_path = db_path / f"bm25_index_{collection_name}.pkl"
+    if not bm25_path.exists():
+        bm25_path = db_path / "bm25_index.pkl"
     if not bm25_path.exists():
         return None
     with open(bm25_path, "rb") as f:
@@ -439,6 +463,11 @@ def main():
         default="text",
         help="Output format (default: text)",
     )
+    parser.add_argument(
+        "--collection",
+        default="brain",
+        help="Collection name (default: brain)",
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -472,6 +501,10 @@ def main():
     p_date.add_argument("end_date", help="End date (YYYY-MM-DD)")
     p_date.add_argument("--top-k", "-k", type=int, default=50, help="Max chunks")
 
+    # prune
+    p_prune = subparsers.add_parser("prune", help="Remove chunks for deleted files")
+    p_prune.add_argument("repo_root", help="Repository root to check file existence")
+
     args = parser.parse_args()
 
     # Auto-detect DB path
@@ -493,7 +526,7 @@ def main():
             except Exception:
                 pass
 
-    collection = get_collection(db_path)
+    collection = get_collection(db_path, args.collection)
 
     if args.command == "search":
         if args.mode == "semantic":
@@ -538,6 +571,8 @@ def main():
     elif args.command == "date-range":
         cmd_date_range(collection, args.start_date, args.end_date,
                        args.top_k, args.format)
+    elif args.command == "prune":
+        removed = cmd_prune(collection, Path(args.repo_root), args.format)
 
 
 if __name__ == "__main__":

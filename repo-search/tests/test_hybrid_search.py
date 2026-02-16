@@ -9,13 +9,13 @@ class TestBM25Index:
     def test_bm25_index_created_on_ingest(self, repo_all_formats, tmp_path_factory):
         db_path = tmp_path_factory.mktemp("db")
         ingest(repo_root=repo_all_formats, db_path=db_path, force=True)
-        bm25_path = db_path / "bm25_index.pkl"
+        bm25_path = db_path / "bm25_index_brain.pkl"
         assert bm25_path.exists()
 
     def test_bm25_index_loadable(self, repo_all_formats, tmp_path_factory):
         db_path = tmp_path_factory.mktemp("db")
         ingest(repo_root=repo_all_formats, db_path=db_path, force=True)
-        bm25_path = db_path / "bm25_index.pkl"
+        bm25_path = db_path / "bm25_index_brain.pkl"
         with open(bm25_path, "rb") as f:
             data = pickle.load(f)
         assert "bm25" in data

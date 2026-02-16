@@ -54,6 +54,26 @@ class TestIngestPipeline:
         assert "Brand new content" in all_text
 
 
+class TestBatchIngestion:
+    def test_large_batch_ingestion(self, repo_all_formats, tmp_path_factory):
+        """Ingestion should handle batched adds without error."""
+        # Add many small files to force batching
+        for i in range(50):
+            area_dir = repo_all_formats / "batch_test"
+            area_dir.mkdir(exist_ok=True)
+            (area_dir / f"doc_{i:03d}.md").write_text(
+                f"# Document {i}\n\n" +
+                f"Content for document number {i} with enough text to be a valid chunk. " * 10 + "\n"
+            )
+        db_path = tmp_path_factory.mktemp("db")
+        from ingest import ingest
+        ingest(repo_root=repo_all_formats, db_path=db_path, force=True)
+        import chromadb
+        client = chromadb.PersistentClient(path=str(db_path))
+        collection = client.get_collection("brain")
+        assert collection.count() > 50
+
+
 class TestQueryRoundTrip:
     def test_semantic_search_returns_relevant(self, ingested_db):
         client = chromadb.PersistentClient(path=str(ingested_db))
