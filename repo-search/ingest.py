@@ -411,6 +411,27 @@ def ingest(
     elapsed = time.time() - start_time
     save_hash_cache(cache_path, hash_cache)
 
+    # Build BM25 index for hybrid search
+    import pickle
+    from rank_bm25 import BM25Okapi
+
+    print("Building BM25 index...")
+    all_results = collection.get(include=["documents", "metadatas"])
+    if all_results["documents"]:
+        corpus = [doc.lower().split() for doc in all_results["documents"]]
+        bm25 = BM25Okapi(corpus)
+        bm25_data = {
+            "bm25": bm25,
+            "ids": all_results["ids"],
+            "metadatas": all_results["metadatas"],
+            "documents": all_results["documents"],
+        }
+        bm25_path = db_path / "bm25_index.pkl"
+        with open(bm25_path, "wb") as fp:
+            pickle.dump(bm25_data, fp)
+        if verbose:
+            print(f"  BM25 index saved: {bm25_path}")
+
     # Print summary
     print()
     print(f"=== Ingestion Complete ===")
