@@ -38,6 +38,9 @@ SKIP_DIRS = {
 # File patterns to skip
 SKIP_FILES = {"TEMPLATE.md", "README.md"}
 
+# Default embedding model (ChromaDB's built-in default)
+DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
 # Default chunk settings
 DEFAULT_CHUNK_SIZE = 1000  # characters (~250 tokens)
 DEFAULT_CHUNK_OVERLAP = 200  # characters overlap between chunks
@@ -323,7 +326,7 @@ def ingest(
     client = chromadb.PersistentClient(path=str(db_path))
     collection = client.get_or_create_collection(
         name="brain",
-        metadata={"hnsw:space": "cosine"},
+        metadata={"hnsw:space": "cosine", "embedding_model": DEFAULT_EMBEDDING_MODEL},
     )
 
     # Process each file
@@ -345,6 +348,18 @@ def ingest(
 
         metadata = extract_metadata(f, repo_root, content)
         chunks = chunk_text(content, f, chunk_size, chunk_overlap)
+
+        # Prepend document title to chunks for embedding context
+        title = metadata["title"]
+        if title:
+            enriched_chunks = []
+            for chunk in chunks:
+                # Don't add title if it's already in the first ~50 chars of the chunk
+                if title not in chunk[:len(title) + 50]:
+                    enriched_chunks.append(f"[{title}]\n\n{chunk}")
+                else:
+                    enriched_chunks.append(chunk)
+            chunks = enriched_chunks
 
         if not chunks:
             if verbose:
