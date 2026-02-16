@@ -42,6 +42,14 @@ SKIP_FILES = {"TEMPLATE.md", "README.md"}
 DEFAULT_CHUNK_SIZE = 1000  # characters (~250 tokens)
 DEFAULT_CHUNK_OVERLAP = 200  # characters overlap between chunks
 
+# Per-format chunk size defaults
+FORMAT_CHUNK_DEFAULTS = {
+    ".md": {"chunk_size": 1500, "chunk_overlap": 200},
+    ".pdf": {"chunk_size": 1000, "chunk_overlap": 200},
+    ".docx": {"chunk_size": 1500, "chunk_overlap": 200},
+    ".xlsx": {"chunk_size": 2000, "chunk_overlap": 200},
+}
+
 
 def find_files(repo_root: Path) -> list[Path]:
     """Find all supported files in the repo, skipping excluded directories."""
@@ -162,21 +170,59 @@ def extract_metadata(file_path: Path, repo_root: Path, content: str) -> dict:
     }
 
 
+def _get_heading_chain(content: str, position: int) -> str:
+    """Extract the heading chain (h1 > h2 > h3) that applies at a given position."""
+    lines = content[:position].split("\n")
+    headings = {}
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            headings[3] = stripped[4:].strip()
+        elif stripped.startswith("## "):
+            headings[2] = stripped[3:].strip()
+            headings.pop(3, None)
+        elif stripped.startswith("# "):
+            headings[1] = stripped[2:].strip()
+            headings.pop(2, None)
+            headings.pop(3, None)
+    parts = [headings[level] for level in sorted(headings.keys())]
+    return " > ".join(parts) if parts else ""
+
+
 def chunk_text(content: str, file_path: Path,
-               chunk_size: int = DEFAULT_CHUNK_SIZE,
-               chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[str]:
+               chunk_size: int = None,
+               chunk_overlap: int = None) -> list[str]:
     """Split content into chunks using appropriate splitter for file type."""
-    if file_path.suffix.lower() == ".md":
+    ext = file_path.suffix.lower()
+    defaults = FORMAT_CHUNK_DEFAULTS.get(
+        ext, {"chunk_size": DEFAULT_CHUNK_SIZE, "chunk_overlap": DEFAULT_CHUNK_OVERLAP}
+    )
+    chunk_size = chunk_size if chunk_size is not None else defaults["chunk_size"]
+    chunk_overlap = chunk_overlap if chunk_overlap is not None else defaults["chunk_overlap"]
+
+    if ext == ".md":
         splitter = MarkdownTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
+        raw_chunks = splitter.split_text(content)
+        enriched = []
+        for chunk in raw_chunks:
+            # Find where this chunk appears in original content
+            search_key = chunk[:80].strip()
+            pos = content.find(search_key)
+            if pos > 0:
+                heading_chain = _get_heading_chain(content, pos)
+                if heading_chain and not chunk.strip().startswith("# "):
+                    chunk = f"[{heading_chain}]\n\n{chunk}"
+            enriched.append(chunk)
+        chunks = enriched
     else:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
-    chunks = splitter.split_text(content)
+        chunks = splitter.split_text(content)
     # Filter out very short chunks (less than 50 chars)
     return [c for c in chunks if len(c.strip()) >= 50]
 

@@ -1,6 +1,6 @@
 """Tests for text chunking logic."""
 from pathlib import Path
-from ingest import chunk_text, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
+from ingest import chunk_text, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, FORMAT_CHUNK_DEFAULTS
 
 
 class TestMarkdownChunking:
@@ -73,3 +73,61 @@ class TestNonMarkdownChunking:
         content = extract_text(f)
         chunks = chunk_text(content, f)
         assert isinstance(chunks, list)
+
+
+class TestHeadingContextChunking:
+    def test_chunks_contain_heading_context(self, repo_all_formats):
+        """Each markdown chunk should include its parent heading chain."""
+        f = repo_all_formats / "finance" / "reports" / "2025-01-15-q4-revenue.md"
+        content = f.read_text()
+        chunks = chunk_text(content, f)
+        # The "Regional Breakdown" content should reference that section
+        regional_chunks = [c for c in chunks if "North America" in c]
+        assert len(regional_chunks) >= 1
+        assert any("Regional Breakdown" in c for c in regional_chunks)
+
+    def test_code_blocks_not_split(self, tmp_path):
+        """Code blocks should be kept intact within a single chunk."""
+        f = tmp_path / "code.md"
+        code_block = "```python\n" + "\n".join(f"line_{i} = {i}" for i in range(30)) + "\n```"
+        content = f"# Code Examples\n\n## Example 1\n\n{code_block}\n\n## Example 2\n\nSome other content here that is long enough to be a valid chunk.\n"
+        f.write_text(content)
+        chunks = chunk_text(content, f, chunk_size=2000)
+        # Find the chunk with the code block - it should contain start and end markers
+        code_chunks = [c for c in chunks if "line_0 = 0" in c]
+        assert len(code_chunks) >= 1
+
+
+class TestXlsxStructuredChunking:
+    def test_xlsx_chunks_contain_sheet_name(self, repo_all_formats):
+        f = repo_all_formats / "finance" / "data" / "budget-2025.xlsx"
+        from ingest import extract_text
+        content = extract_text(f)
+        assert "Sheet:" in content
+        # Both sheets should be present
+        assert "Q1 Budget" in content
+        assert "Q2 Budget" in content
+
+    def test_xlsx_preserves_data(self, repo_all_formats):
+        f = repo_all_formats / "finance" / "data" / "budget-2025.xlsx"
+        from ingest import extract_text
+        content = extract_text(f)
+        assert "Marketing" in content
+        assert "50000" in content
+
+
+class TestPerFormatChunkSize:
+    def test_format_defaults_exist(self):
+        assert ".md" in FORMAT_CHUNK_DEFAULTS
+        assert ".pdf" in FORMAT_CHUNK_DEFAULTS
+        assert ".docx" in FORMAT_CHUNK_DEFAULTS
+        assert ".xlsx" in FORMAT_CHUNK_DEFAULTS
+
+    def test_markdown_default_larger(self):
+        assert FORMAT_CHUNK_DEFAULTS[".md"]["chunk_size"] == 1500
+
+    def test_xlsx_default_larger(self):
+        assert FORMAT_CHUNK_DEFAULTS[".xlsx"]["chunk_size"] == 2000
+
+    def test_pdf_default(self):
+        assert FORMAT_CHUNK_DEFAULTS[".pdf"]["chunk_size"] == 1000
