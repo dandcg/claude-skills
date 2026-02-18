@@ -11,6 +11,7 @@ claude-skills/
 ├── repo-search/      # Semantic search over markdown files (Python/ChromaDB)
 ├── pst-to-markdown/  # PST to markdown extraction (Python)
 ├── email-search/     # PST ingestion + vector search + analytics (Python/ChromaDB)
+├── flaresolverr/     # Bypass Cloudflare anti-bot protection (Docker/bash)
 ├── install.sh        # Symlink installer for all skills
 └── README.md         # User-facing documentation
 ```
@@ -58,11 +59,13 @@ No secrets in the repo. Each skill externalises credentials:
 | Repo Search | None (local) |
 | PST to Markdown | None (local) |
 | Email Search | None (local) |
+| FlareSolverr | None (Docker) |
 
 ### Dependencies
 
 - **Outlook/Trello:** bash, jq, curl (+ azure-cli for Outlook)
 - **Python skills:** Each has its own `requirements.txt` and `.venv/`
+- **FlareSolverr:** Docker
 - `install.sh` handles venv creation and dependency installation automatically
 
 ## Conventions

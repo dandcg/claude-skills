@@ -28,14 +28,15 @@ Usage:
 import argparse
 import json
 import os
+import pickle
 import sys
 from pathlib import Path
 
 import chromadb
 
 
-def get_collection(db_path: Path):
-    """Get the brain collection from ChromaDB."""
+def get_collection(db_path: Path, collection_name: str = "brain"):
+    """Get a named collection from ChromaDB."""
     if not db_path.exists():
         print(f"Error: Database not found at {db_path}", file=sys.stderr)
         print("Run ingest.py first to build the index.", file=sys.stderr)
@@ -43,9 +44,9 @@ def get_collection(db_path: Path):
 
     client = chromadb.PersistentClient(path=str(db_path))
     try:
-        return client.get_collection("brain")
+        return client.get_collection(collection_name)
     except Exception:
-        print("Error: 'brain' collection not found. Run ingest.py first.", file=sys.stderr)
+        print(f"Error: '{collection_name}' collection not found. Run ingest.py first.", file=sys.stderr)
         sys.exit(1)
 
 
@@ -299,6 +300,156 @@ def cmd_stats(collection, output_format: str = "text"):
             print(f"  {area}: {areas[area]}")
 
 
+def cmd_prune(collection, repo_root: Path, output_format: str = "text") -> int:
+    """Remove chunks for files that no longer exist on disk."""
+    results = collection.get(include=["metadatas"])
+    file_paths = {m["file_path"] for m in results["metadatas"]}
+
+    removed = 0
+    for fp in file_paths:
+        full_path = repo_root / fp
+        if not full_path.exists():
+            chunks = collection.get(where={"file_path": fp})
+            if chunks["ids"]:
+                collection.delete(ids=chunks["ids"])
+                removed += len(chunks["ids"])
+                if output_format == "text":
+                    print(f"  Pruned {len(chunks['ids'])} chunks: {fp}")
+
+    if output_format == "text":
+        print(f"\nTotal pruned: {removed} chunks")
+    return removed
+
+
+def _load_bm25(db_path: Path, collection_name: str = "brain"):
+    """Load the BM25 index from disk."""
+    # Try collection-specific path first, fall back to legacy path
+    bm25_path = db_path / f"bm25_index_{collection_name}.pkl"
+    if not bm25_path.exists():
+        bm25_path = db_path / "bm25_index.pkl"
+    if not bm25_path.exists():
+        return None
+    with open(bm25_path, "rb") as f:
+        return pickle.load(f)
+
+
+def keyword_search(collection, db_path: Path, query: str, top_k: int = 10):
+    """BM25 keyword search."""
+    bm25_data = _load_bm25(db_path)
+    if not bm25_data:
+        return []
+    tokenized_query = query.lower().split()
+    scores = bm25_data["bm25"].get_scores(tokenized_query)
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+    results = []
+    for idx in top_indices:
+        if scores[idx] > 0:
+            results.append({
+                "id": bm25_data["ids"][idx],
+                "score": float(scores[idx]),
+                "metadata": bm25_data["metadatas"][idx],
+                "content": bm25_data["documents"][idx],
+            })
+    return results
+
+
+def hybrid_search(collection, db_path: Path, query: str, top_k: int = 10,
+                  area: str = None, sub_area: str = None):
+    """Hybrid search combining vector similarity and BM25 via Reciprocal Rank Fusion."""
+    # Vector search
+    where_filter = None
+    conditions = []
+    if area:
+        conditions.append({"area": area})
+    if sub_area:
+        conditions.append({"sub_area": sub_area})
+    if len(conditions) == 1:
+        where_filter = conditions[0]
+    elif len(conditions) > 1:
+        where_filter = {"$and": conditions}
+
+    vector_results = collection.query(
+        query_texts=[query],
+        n_results=min(top_k * 2, collection.count()),
+        where=where_filter,
+        include=["documents", "metadatas", "distances"],
+    )
+
+    # BM25 search
+    bm25_results = keyword_search(collection, db_path, query, top_k=top_k * 2)
+
+    # Reciprocal Rank Fusion (k=60 is standard)
+    k = 60
+    rrf_scores = {}
+
+    for rank, chunk_id in enumerate(vector_results["ids"][0], start=1):
+        rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0) + 1.0 / (k + rank)
+
+    for rank, result in enumerate(bm25_results, start=1):
+        chunk_id = result["id"]
+        rrf_scores[chunk_id] = rrf_scores.get(chunk_id, 0) + 1.0 / (k + rank)
+
+    sorted_ids = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)[:top_k]
+
+    # Build result list
+    all_vector_ids = vector_results["ids"][0]
+    bm25_by_id = {r["id"]: r for r in bm25_results}
+    results = []
+    for chunk_id in sorted_ids:
+        if chunk_id in all_vector_ids:
+            idx = all_vector_ids.index(chunk_id)
+            results.append({
+                "id": chunk_id,
+                "score": rrf_scores[chunk_id],
+                "metadata": vector_results["metadatas"][0][idx],
+                "content": vector_results["documents"][0][idx],
+            })
+        elif chunk_id in bm25_by_id:
+            br = bm25_by_id[chunk_id]
+            results.append({
+                "id": chunk_id,
+                "score": rrf_scores[chunk_id],
+                "metadata": br["metadata"],
+                "content": br["content"],
+            })
+
+    return results
+
+
+def rerank_results(results: list, query: str, deduplicate: bool = True) -> list:
+    """Lightweight reranking: deduplication and metadata boosting."""
+    if not results:
+        return results
+
+    query_terms = set(query.lower().split())
+
+    boosted = []
+    for r in results:
+        boost = 0.0
+        title = r["metadata"].get("title", "").lower()
+        area = r["metadata"].get("area", "").lower()
+        title_words = set(title.split())
+        overlap = query_terms & title_words
+        boost += len(overlap) * 0.05
+        if area in query_terms:
+            boost += 0.02
+        boosted.append({**r, "score": r["score"] + boost})
+
+    boosted.sort(key=lambda x: x["score"], reverse=True)
+
+    if deduplicate:
+        seen_files = set()
+        deduped = []
+        for r in boosted:
+            fp = r["metadata"]["file_path"]
+            if fp not in seen_files:
+                seen_files.add(fp)
+                deduped.append(r)
+        return deduped
+
+    return boosted
+
+
 def main():
     parser = argparse.ArgumentParser(description="Query the vector search database")
     parser.add_argument(
@@ -312,6 +463,11 @@ def main():
         default="text",
         help="Output format (default: text)",
     )
+    parser.add_argument(
+        "--collection",
+        default="brain",
+        help="Collection name (default: brain)",
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -321,6 +477,8 @@ def main():
     p_search.add_argument("--top-k", "-k", type=int, default=10, help="Number of results")
     p_search.add_argument("--area", help="Filter by area")
     p_search.add_argument("--sub-area", help="Filter by sub-area")
+    p_search.add_argument("--mode", choices=["semantic", "keyword", "hybrid"],
+                           default="semantic", help="Search mode (default: semantic)")
 
     # list
     subparsers.add_parser("list", help="List indexed files")
@@ -343,6 +501,10 @@ def main():
     p_date.add_argument("end_date", help="End date (YYYY-MM-DD)")
     p_date.add_argument("--top-k", "-k", type=int, default=50, help="Max chunks")
 
+    # prune
+    p_prune = subparsers.add_parser("prune", help="Remove chunks for deleted files")
+    p_prune.add_argument("repo_root", help="Repository root to check file existence")
+
     args = parser.parse_args()
 
     # Auto-detect DB path
@@ -364,11 +526,40 @@ def main():
             except Exception:
                 pass
 
-    collection = get_collection(db_path)
+    collection = get_collection(db_path, args.collection)
 
     if args.command == "search":
-        cmd_search(collection, args.query, args.top_k, args.area,
-                   getattr(args, "sub_area", None), args.format)
+        if args.mode == "semantic":
+            cmd_search(collection, args.query, args.top_k, args.area,
+                       getattr(args, "sub_area", None), args.format)
+        elif args.mode == "keyword":
+            results = keyword_search(collection, db_path, args.query, args.top_k)
+            # Print results in similar format
+            if args.format == "json":
+                print(json.dumps(results, indent=2))
+            else:
+                print(f"Query: {args.query} (keyword mode)")
+                print(f"Results: {len(results)}")
+                print("=" * 60)
+                for i, r in enumerate(results, 1):
+                    print(f"\n--- Result {i} [BM25 score: {r['score']:.3f}] ---")
+                    print(f"File: {r['metadata']['file_path']}")
+                    content = r['content']
+                    print(content[:500] + "..." if len(content) > 500 else content)
+        elif args.mode == "hybrid":
+            results = hybrid_search(collection, db_path, args.query, args.top_k,
+                                    args.area, getattr(args, "sub_area", None))
+            if args.format == "json":
+                print(json.dumps(results, indent=2))
+            else:
+                print(f"Query: {args.query} (hybrid mode)")
+                print(f"Results: {len(results)}")
+                print("=" * 60)
+                for i, r in enumerate(results, 1):
+                    print(f"\n--- Result {i} [RRF score: {r['score']:.4f}] ---")
+                    print(f"File: {r['metadata']['file_path']}")
+                    content = r['content']
+                    print(content[:500] + "..." if len(content) > 500 else content)
     elif args.command == "list":
         cmd_list(collection, args.format)
     elif args.command == "stats":
@@ -380,6 +571,8 @@ def main():
     elif args.command == "date-range":
         cmd_date_range(collection, args.start_date, args.end_date,
                        args.top_k, args.format)
+    elif args.command == "prune":
+        removed = cmd_prune(collection, Path(args.repo_root), args.format)
 
 
 if __name__ == "__main__":

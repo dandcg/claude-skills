@@ -38,9 +38,23 @@ SKIP_DIRS = {
 # File patterns to skip
 SKIP_FILES = {"TEMPLATE.md", "README.md"}
 
+# Default embedding model (ChromaDB's built-in default)
+DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
 # Default chunk settings
 DEFAULT_CHUNK_SIZE = 1000  # characters (~250 tokens)
 DEFAULT_CHUNK_OVERLAP = 200  # characters overlap between chunks
+
+# Batch size for ChromaDB adds
+BATCH_SIZE = 500
+
+# Per-format chunk size defaults
+FORMAT_CHUNK_DEFAULTS = {
+    ".md": {"chunk_size": 1500, "chunk_overlap": 200},
+    ".pdf": {"chunk_size": 1000, "chunk_overlap": 200},
+    ".docx": {"chunk_size": 1500, "chunk_overlap": 200},
+    ".xlsx": {"chunk_size": 2000, "chunk_overlap": 200},
+}
 
 
 def find_files(repo_root: Path) -> list[Path]:
@@ -162,21 +176,59 @@ def extract_metadata(file_path: Path, repo_root: Path, content: str) -> dict:
     }
 
 
+def _get_heading_chain(content: str, position: int) -> str:
+    """Extract the heading chain (h1 > h2 > h3) that applies at a given position."""
+    lines = content[:position].split("\n")
+    headings = {}
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            headings[3] = stripped[4:].strip()
+        elif stripped.startswith("## "):
+            headings[2] = stripped[3:].strip()
+            headings.pop(3, None)
+        elif stripped.startswith("# "):
+            headings[1] = stripped[2:].strip()
+            headings.pop(2, None)
+            headings.pop(3, None)
+    parts = [headings[level] for level in sorted(headings.keys())]
+    return " > ".join(parts) if parts else ""
+
+
 def chunk_text(content: str, file_path: Path,
-               chunk_size: int = DEFAULT_CHUNK_SIZE,
-               chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[str]:
+               chunk_size: int = None,
+               chunk_overlap: int = None) -> list[str]:
     """Split content into chunks using appropriate splitter for file type."""
-    if file_path.suffix.lower() == ".md":
+    ext = file_path.suffix.lower()
+    defaults = FORMAT_CHUNK_DEFAULTS.get(
+        ext, {"chunk_size": DEFAULT_CHUNK_SIZE, "chunk_overlap": DEFAULT_CHUNK_OVERLAP}
+    )
+    chunk_size = chunk_size if chunk_size is not None else defaults["chunk_size"]
+    chunk_overlap = chunk_overlap if chunk_overlap is not None else defaults["chunk_overlap"]
+
+    if ext == ".md":
         splitter = MarkdownTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
+        raw_chunks = splitter.split_text(content)
+        enriched = []
+        for chunk in raw_chunks:
+            # Find where this chunk appears in original content
+            search_key = chunk[:80].strip()
+            pos = content.find(search_key)
+            if pos > 0:
+                heading_chain = _get_heading_chain(content, pos)
+                if heading_chain and not chunk.strip().startswith("# "):
+                    chunk = f"[{heading_chain}]\n\n{chunk}"
+            enriched.append(chunk)
+        chunks = enriched
     else:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
-    chunks = splitter.split_text(content)
+        chunks = splitter.split_text(content)
     # Filter out very short chunks (less than 50 chars)
     return [c for c in chunks if len(c.strip()) >= 50]
 
@@ -207,6 +259,7 @@ def ingest(
     verbose: bool = False,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+    collection_name: str = "brain",
 ):
     """Main ingestion pipeline."""
 
@@ -276,14 +329,31 @@ def ingest(
     db_path.mkdir(parents=True, exist_ok=True)
     client = chromadb.PersistentClient(path=str(db_path))
     collection = client.get_or_create_collection(
-        name="brain",
-        metadata={"hnsw:space": "cosine"},
+        name=collection_name,
+        metadata={"hnsw:space": "cosine", "embedding_model": DEFAULT_EMBEDDING_MODEL},
     )
 
-    # Process each file
+    # Process each file — accumulate chunks and batch-add to ChromaDB
     total_chunks = 0
     skipped = 0
     start_time = time.time()
+
+    # Batch accumulators
+    batch_ids = []
+    batch_documents = []
+    batch_metadatas = []
+
+    def _flush_batch():
+        """Flush accumulated chunks to ChromaDB."""
+        if batch_ids:
+            collection.add(
+                ids=batch_ids[:],
+                documents=batch_documents[:],
+                metadatas=batch_metadatas[:],
+            )
+            batch_ids.clear()
+            batch_documents.clear()
+            batch_metadatas.clear()
 
     for i, (f, file_hash) in enumerate(files_to_process, 1):
         rel_path = str(f.relative_to(repo_root))
@@ -300,6 +370,18 @@ def ingest(
         metadata = extract_metadata(f, repo_root, content)
         chunks = chunk_text(content, f, chunk_size, chunk_overlap)
 
+        # Prepend document title to chunks for embedding context
+        title = metadata["title"]
+        if title:
+            enriched_chunks = []
+            for chunk in chunks:
+                # Don't add title if it's already in the first ~50 chars of the chunk
+                if title not in chunk[:len(title) + 50]:
+                    enriched_chunks.append(f"[{title}]\n\n{chunk}")
+                else:
+                    enriched_chunks.append(chunk)
+            chunks = enriched_chunks
+
         if not chunks:
             if verbose:
                 print(f"  [{i}/{len(files_to_process)}] {rel_path}: no chunks (too short)")
@@ -309,22 +391,20 @@ def ingest(
         try:
             existing = collection.get(where={"file_path": rel_path})
             if existing["ids"]:
+                # Flush pending batch before deleting to avoid ID conflicts
+                _flush_batch()
                 collection.delete(ids=existing["ids"])
                 if verbose:
                     print(f"  Deleted {len(existing['ids'])} old chunks for {rel_path}")
         except Exception:
             pass  # Collection might be empty
 
-        # Prepare batch data
-        ids = []
-        documents = []
-        metadatas = []
-
+        # Accumulate chunks into batch
         for j, chunk in enumerate(chunks):
             chunk_id = f"{rel_path}::chunk_{j}"
-            ids.append(chunk_id)
-            documents.append(chunk)
-            metadatas.append({
+            batch_ids.append(chunk_id)
+            batch_documents.append(chunk)
+            batch_metadatas.append({
                 **metadata,
                 "chunk_index": j,
                 "chunk_count": len(chunks),
@@ -332,23 +412,45 @@ def ingest(
                 "ingested_at": datetime.now().isoformat(),
             })
 
-        # Add to collection
-        collection.add(
-            ids=ids,
-            documents=documents,
-            metadatas=metadatas,
-        )
+        # Flush when batch is large enough
+        if len(batch_ids) >= BATCH_SIZE:
+            _flush_batch()
 
         total_chunks += len(chunks)
         # Update hash cache
         hash_cache[rel_path] = file_hash
 
-        if verbose or i % 10 == 0 or i == len(files_to_process):
-            print(f"  [{i}/{len(files_to_process)}] {rel_path}: "
-                  f"{len(chunks)} chunks")
+        elapsed_so_far = time.time() - start_time
+        rate = i / elapsed_so_far if elapsed_so_far > 0 else 0
+        print(f"  [{i}/{len(files_to_process)}] {rel_path}: "
+              f"{len(chunks)} chunks ({rate:.1f} files/s)")
+
+    # Flush remaining batch
+    _flush_batch()
 
     elapsed = time.time() - start_time
     save_hash_cache(cache_path, hash_cache)
+
+    # Build BM25 index for hybrid search
+    import pickle
+    from rank_bm25 import BM25Okapi
+
+    print("Building BM25 index...")
+    all_results = collection.get(include=["documents", "metadatas"])
+    if all_results["documents"]:
+        corpus = [doc.lower().split() for doc in all_results["documents"]]
+        bm25 = BM25Okapi(corpus)
+        bm25_data = {
+            "bm25": bm25,
+            "ids": all_results["ids"],
+            "metadatas": all_results["metadatas"],
+            "documents": all_results["documents"],
+        }
+        bm25_path = db_path / f"bm25_index_{collection_name}.pkl"
+        with open(bm25_path, "wb") as fp:
+            pickle.dump(bm25_data, fp)
+        if verbose:
+            print(f"  BM25 index saved: {bm25_path}")
 
     # Print summary
     print()
@@ -384,6 +486,8 @@ def main():
                         help=f"Chunk size in chars (default: {DEFAULT_CHUNK_SIZE})")
     parser.add_argument("--chunk-overlap", type=int, default=DEFAULT_CHUNK_OVERLAP,
                         help=f"Chunk overlap in chars (default: {DEFAULT_CHUNK_OVERLAP})")
+    parser.add_argument("--collection", default="brain",
+                        help="Collection name (default: brain)")
 
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
@@ -397,6 +501,7 @@ def main():
         verbose=args.verbose,
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
+        collection_name=args.collection,
     )
 
 
