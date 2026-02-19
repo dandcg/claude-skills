@@ -22,6 +22,7 @@
 | 📨 **[PST to Markdown](./pst-to-markdown/)** | Extract Outlook PST archives into organised markdown with YAML frontmatter & integrity verification |
 | 📧 **[Email Search](./email-search/)** | Ingest PST archives into ChromaDB — semantic search, analytics, timelines, top contacts, export |
 | 🛡️ **[FlareSolverr](./flaresolverr/)** | Bypass Cloudflare & anti-bot protection via a real browser in Docker — scrape any protected page |
+| 📎 **[Web Clipper](./web-clipper/)** | Clip web pages to markdown with YAML frontmatter — clean extraction, Cloudflare bypass, tagging, full-text search, repo-search integration |
 
 ## 🚀 Installation
 
@@ -68,6 +69,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 📨 PST to Markdown | None (local only) | `pst-to-markdown/setup.sh` |
 | 📧 Email Search | None (local only) | `email-search/setup.sh` |
 | 🛡️ FlareSolverr | None (Docker) | Auto-managed |
+| 📎 Web Clipper | None (local only) | `web-clipper/setup.sh` |
 
 ## ⚙️ Requirements
 
@@ -79,6 +81,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 📨 PST to Markdown | Python 3 · pip · `readpst` (optional fallback) |
 | 📧 Email Search | Python 3 · pip |
 | 🛡️ FlareSolverr | Docker |
+| 📎 Web Clipper | Python 3 · pip · Docker (optional) |
 
 ## 📄 License
 
