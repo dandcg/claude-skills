@@ -1,27 +1,29 @@
-# Claude Code Skills
+<div align="center">
 
-Custom skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that extend its capabilities with external service integrations and local tooling.
+# 🧩 Claude Code Skills
 
-## Skills
+**Extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with external service integrations and local tooling.**
 
-### [Outlook](./outlook/) - Email & Calendar
-Microsoft 365 email and calendar via Microsoft Graph API. Read inbox, send emails (with markdown formatting), manage drafts, handle attachments up to 150MB, view calendar, check availability, and create events.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-Skills-blueviolet?logo=anthropic)](https://docs.anthropic.com/en/docs/claude-code)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20WSL-lightgrey)]()
 
-### [Trello](./trello/) - Board Management
-Trello boards, lists, and cards via the REST API. List boards, create/update/move/archive cards, add comments, manage positions, and smart-sort cards by category.
+</div>
 
-### [Repo Search](./repo-search/) - Semantic Search
-ChromaDB-powered semantic search across a directory of markdown files. Find information by meaning rather than keywords, filter by area or date range, and build summaries from relevant chunks. Great for personal knowledge bases / second brains.
+---
 
-### [PST to Markdown](./pst-to-markdown/) - PST Extraction
-Python tool for extracting Outlook PST files into organised markdown archives with integrity verification. Supports full and incremental extraction, attachment handling, and produces a searchable directory of emails with YAML frontmatter. Pairs well with Repo Search for semantic search across extracted archives.
+## 📦 Skills
 
-### [Email Search](./email-search/) - Email Archive & Search
-Python CLI tool for ingesting PST email archives into ChromaDB with automatic semantic embeddings. Search, analytics (timelines, top contacts, activity patterns), and export to markdown.
+| Skill | Description |
+|-------|-------------|
+| 📬 **[Outlook](./outlook/)** | Microsoft 365 email & calendar via Graph API — inbox, send, drafts, attachments (up to 150 MB), calendar & availability |
+| 📋 **[Trello](./trello/)** | Board management via REST API — boards, lists, cards, comments, positions, smart-sort |
+| 🔍 **[Repo Search](./repo-search/)** | ChromaDB semantic search across markdown, PDF, DOCX & XLSX — find by meaning, filter by area/date, build summaries |
+| 📨 **[PST to Markdown](./pst-to-markdown/)** | Extract Outlook PST archives into organised markdown with YAML frontmatter & integrity verification |
+| 📧 **[Email Search](./email-search/)** | Ingest PST archives into ChromaDB — semantic search, analytics, timelines, top contacts, export |
+| 🛡️ **[FlareSolverr](./flaresolverr/)** | Bypass Cloudflare & anti-bot protection via a real browser in Docker — scrape any protected page |
 
-## Installation
-
-Clone the repo and run the install script:
+## 🚀 Installation
 
 ```bash
 git clone https://github.com/dandcg/claude-skills.git
@@ -37,11 +39,11 @@ cd claude-skills
 ./install.sh
 ```
 
-Skills are **symlinked** — edits to this repo are immediately live in Claude Code, no re-install needed after `git pull`.
+> Skills are **symlinked** — edits to this repo are immediately live in Claude Code. No re-install needed after `git pull`.
 
 Each skill's `SKILL.md` uses [Claude Code's skill format](https://docs.anthropic.com/en/docs/claude-code) with YAML frontmatter for automatic discovery.
 
-## Skill Structure
+## 🗂️ Skill Structure
 
 All skills follow a consistent layout:
 
@@ -49,33 +51,35 @@ All skills follow a consistent layout:
 skill-name/
   SKILL.md            # Skill definition (YAML frontmatter + usage docs)
   README.md           # Human-readable documentation
-  install.sh          # Automated installer
+  setup.sh            # Automated first-time setup
   scripts/            # Executable scripts
   references/         # Setup guides & manual instructions
 ```
 
-## Credentials
+## 🔐 Credentials
 
 No secrets are stored in this repo. Each skill externalises credentials:
 
 | Skill | Credential Location | Setup |
-|-------|-------------------|-------|
-| Outlook | `~/.outlook/` | `outlook/scripts/outlook-setup.sh` |
-| Trello | `~/.trello/` | `trello/scripts/trello-setup.sh` |
-| Repo Search | None (local only) | `repo-search/setup.sh` |
-| PST to Markdown | None (local only) | `pst-to-markdown/setup.sh` |
-| Email Search | None (local only) | `email-search/setup.sh` |
+|-------|---------------------|-------|
+| 📬 Outlook | `~/.outlook/` | `outlook/scripts/outlook-setup.sh` |
+| 📋 Trello | `~/.trello/` | `trello/scripts/trello-setup.sh` |
+| 🔍 Repo Search | None (local only) | `repo-search/setup.sh` |
+| 📨 PST to Markdown | None (local only) | `pst-to-markdown/setup.sh` |
+| 📧 Email Search | None (local only) | `email-search/setup.sh` |
+| 🛡️ FlareSolverr | None (Docker) | Auto-managed |
 
-## Requirements
+## ⚙️ Requirements
 
 | Skill | Dependencies |
 |-------|-------------|
-| Outlook | azure-cli, jq, curl, pandoc (optional) |
-| Trello | jq, curl |
-| Repo Search | Python 3, pip |
-| PST to Markdown | Python 3, pip, readpst (optional fallback) |
-| Email Search | Python 3, pip |
+| 📬 Outlook | `azure-cli` · `jq` · `curl` · `pandoc` (optional) |
+| 📋 Trello | `jq` · `curl` |
+| 🔍 Repo Search | Python 3 · pip |
+| 📨 PST to Markdown | Python 3 · pip · `readpst` (optional fallback) |
+| 📧 Email Search | Python 3 · pip |
+| 🛡️ FlareSolverr | Docker |
 
-## License
+## 📄 License
 
-MIT
+[MIT](LICENSE)
