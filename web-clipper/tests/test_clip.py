@@ -1,11 +1,7 @@
-import json
-import yaml
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-
 import sys
 import os
+
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
