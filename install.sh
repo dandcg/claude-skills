@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr)
+AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper)
 
 # Colours
 GREEN='\033[0;32m'
@@ -101,6 +101,14 @@ check_deps_flaresolverr() {
     return 0
 }
 
+check_deps_web_clipper() {
+    if ! command -v python3 &>/dev/null; then
+        err "Missing dependency for web-clipper: python3"
+        return 1
+    fi
+    return 0
+}
+
 check_deps() {
     local skill="$1"
     case "$skill" in
@@ -110,6 +118,7 @@ check_deps() {
         pst-to-markdown) check_deps_pst_to_markdown ;;
         email-search)   check_deps_email_search ;;
         flaresolverr)   check_deps_flaresolverr ;;
+        web-clipper)    check_deps_web_clipper ;;
         *)              return 0 ;;
     esac
 }
@@ -252,6 +261,17 @@ post_install() {
                 warn "FlareSolverr container exists but is stopped — run: docker start flaresolverr"
             else
                 warn "FlareSolverr container not created — run: ~/.claude/skills/flaresolverr/scripts/flaresolverr-ensure.sh"
+            fi
+            ;;
+
+        web-clipper)
+            chmod +x "$REPO_DIR/web-clipper/setup.sh" 2>/dev/null || true
+            if [ ! -d "$REPO_DIR/web-clipper/.venv" ]; then
+                info "Setting up Python virtual environment..."
+                "$REPO_DIR/web-clipper/setup.sh"
+            else
+                ok "Python venv already exists"
+                "$REPO_DIR/web-clipper/.venv/bin/pip" install -r "$REPO_DIR/web-clipper/requirements.txt" -q 2>/dev/null || true
             fi
             ;;
     esac
