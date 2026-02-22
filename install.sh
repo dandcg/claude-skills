@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper)
+AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper garmin)
 
 # Colours
 GREEN='\033[0;32m'
@@ -109,6 +109,14 @@ check_deps_web_clipper() {
     return 0
 }
 
+check_deps_garmin() {
+    if ! command -v python3 &>/dev/null; then
+        err "Missing dependency for garmin: python3"
+        return 1
+    fi
+    return 0
+}
+
 check_deps() {
     local skill="$1"
     case "$skill" in
@@ -119,6 +127,7 @@ check_deps() {
         email-search)   check_deps_email_search ;;
         flaresolverr)   check_deps_flaresolverr ;;
         web-clipper)    check_deps_web_clipper ;;
+        garmin)         check_deps_garmin ;;
         *)              return 0 ;;
     esac
 }
@@ -272,6 +281,28 @@ post_install() {
             else
                 ok "Python venv already exists"
                 "$REPO_DIR/web-clipper/.venv/bin/pip" install -r "$REPO_DIR/web-clipper/requirements.txt" -q 2>/dev/null || true
+            fi
+            ;;
+
+        garmin)
+            chmod +x "$REPO_DIR/garmin/scripts/setup.sh" 2>/dev/null || true
+
+            # Set up Python venv if needed
+            if [ ! -d "$REPO_DIR/garmin/.venv" ]; then
+                info "Setting up Python virtual environment..."
+                python3 -m venv "$REPO_DIR/garmin/.venv"
+                "$REPO_DIR/garmin/.venv/bin/pip" install --upgrade pip -q
+                "$REPO_DIR/garmin/.venv/bin/pip" install -r "$REPO_DIR/garmin/requirements.txt" -q
+            else
+                ok "Python venv already exists"
+                # Update deps quietly
+                "$REPO_DIR/garmin/.venv/bin/pip" install -r "$REPO_DIR/garmin/requirements.txt" -q 2>/dev/null || true
+            fi
+
+            if [ -f "$HOME/.garmin/config.json" ]; then
+                ok "Garmin credentials found"
+            else
+                warn "No Garmin credentials — run: ~/.claude/skills/garmin/scripts/setup.sh"
             fi
             ;;
     esac
