@@ -23,6 +23,7 @@
 | 📧 **[Email Search](./email-search/)** | Ingest PST archives into ChromaDB — semantic search, analytics, timelines, top contacts, export |
 | 🛡️ **[FlareSolverr](./flaresolverr/)** | Bypass Cloudflare & anti-bot protection via a real browser in Docker — scrape any protected page |
 | 📎 **[Web Clipper](./web-clipper/)** | Clip web pages to markdown with YAML frontmatter — clean extraction, Cloudflare bypass, tagging, full-text search, repo-search integration |
+| ⌚ **[Garmin](./garmin/)** | Garmin Connect health & fitness data — Body Battery, HRV, sleep, activities, VO2 max, training load/readiness, daily snapshots & weekly rollups |
 
 ## 🚀 Installation
 
@@ -70,6 +71,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 📧 Email Search | None (local only) | `email-search/setup.sh` |
 | 🛡️ FlareSolverr | None (Docker) | Auto-managed |
 | 📎 Web Clipper | None (local only) | `web-clipper/setup.sh` |
+| ⌚ Garmin | `~/.garmin/` | `garmin/scripts/setup.sh` |
 
 ## ⚙️ Requirements
 
@@ -82,6 +84,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 📧 Email Search | Python 3 · pip |
 | 🛡️ FlareSolverr | Docker |
 | 📎 Web Clipper | Python 3 · pip · Docker (optional) |
+| ⌚ Garmin | Python 3 · pip |
 
 ## 📄 License
 

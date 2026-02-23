@@ -12,6 +12,7 @@ claude-skills/
 ├── pst-to-markdown/  # PST to markdown extraction (Python)
 ├── email-search/     # PST ingestion + vector search + analytics (Python/ChromaDB)
 ├── flaresolverr/     # Bypass Cloudflare anti-bot protection (Docker/bash)
+├── garmin/           # Garmin Connect health & fitness data (Python/garminconnect)
 ├── install.sh        # Symlink installer for all skills
 └── README.md         # User-facing documentation
 ```
@@ -60,6 +61,7 @@ No secrets in the repo. Each skill externalises credentials:
 | PST to Markdown | None (local) |
 | Email Search | None (local) |
 | FlareSolverr | None (Docker) |
+| Garmin | `~/.garmin/` |
 
 ### Dependencies
 
@@ -74,4 +76,4 @@ No secrets in the repo. Each skill externalises credentials:
 - Python scripts use the skill's `.venv/bin/python` (not system Python)
 - SKILL.md commands use full absolute paths (`~/.claude/skills/<skill>/...`)
 - Error messages go to stderr, structured output (JSON) to stdout
-- All skills work offline except Outlook and Trello (which need API access)
+- All skills work offline except Outlook, Trello, and Garmin (which need API access)
