@@ -24,6 +24,7 @@
 | 🛡️ **[FlareSolverr](./flaresolverr/)** | Bypass Cloudflare & anti-bot protection via a real browser in Docker — scrape any protected page |
 | 📎 **[Web Clipper](./web-clipper/)** | Clip web pages to markdown with YAML frontmatter — clean extraction, Cloudflare bypass, tagging, full-text search, repo-search integration |
 | ⌚ **[Garmin](./garmin/)** | Garmin Connect health & fitness data — Body Battery, HRV, sleep, activities, VO2 max, training load/readiness, daily snapshots & weekly rollups |
+| ✍️ **[Humanize](./humanize/)** | Rewrite AI-generated text to sound natural — 4-pass prompt workflow (burstiness, perplexity, banned patterns, self-audit), optional Undetectable AI API |
 
 ## 🚀 Installation
 
@@ -72,6 +73,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 🛡️ FlareSolverr | None (Docker) | Auto-managed |
 | 📎 Web Clipper | None (local only) | `web-clipper/setup.sh` |
 | ⌚ Garmin | `~/.garmin/` | `garmin/scripts/setup.sh` |
+| ✍️ Humanize | `~/.humanize/` (optional) | `humanize/scripts/setup.sh` |
 
 ## ⚙️ Requirements
 
@@ -85,6 +87,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 🛡️ FlareSolverr | Docker |
 | 📎 Web Clipper | Python 3 · pip · Docker (optional) |
 | ⌚ Garmin | Python 3 · pip |
+| ✍️ Humanize | Python 3 · pip (commercial API only) |
 
 ## 📄 License
 

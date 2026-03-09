@@ -13,6 +13,7 @@ claude-skills/
 ├── email-search/     # PST ingestion + vector search + analytics (Python/ChromaDB)
 ├── flaresolverr/     # Bypass Cloudflare anti-bot protection (Docker/bash)
 ├── garmin/           # Garmin Connect health & fitness data (Python/garminconnect)
+├── humanize/         # Humanize AI-generated text (prompt-driven + optional API)
 ├── install.sh        # Symlink installer for all skills
 └── README.md         # User-facing documentation
 ```
@@ -62,6 +63,7 @@ No secrets in the repo. Each skill externalises credentials:
 | Email Search | None (local) |
 | FlareSolverr | None (Docker) |
 | Garmin | `~/.garmin/` |
+| Humanize | `~/.humanize/` (optional, for commercial API) |
 
 ### Dependencies
 
@@ -76,4 +78,8 @@ No secrets in the repo. Each skill externalises credentials:
 - Python scripts use the skill's `.venv/bin/python` (not system Python)
 - SKILL.md commands use full absolute paths (`~/.claude/skills/<skill>/...`)
 - Error messages go to stderr, structured output (JSON) to stdout
-- All skills work offline except Outlook, Trello, and Garmin (which need API access)
+- All skills work offline except Outlook, Trello, Garmin, and Humanize's commercial API engine (which need API access)
+
+## Important Reminders
+
+- **Always update README.md** when adding or modifying skills. The README has three tables that must stay in sync: Skills list, Credentials, and Requirements. CLAUDE.md also has a Repository Structure tree and Credentials table that must be updated.
