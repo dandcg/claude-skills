@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper garmin)
+AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper garmin humanize)
 
 # Colours
 GREEN='\033[0;32m'
@@ -117,6 +117,14 @@ check_deps_garmin() {
     return 0
 }
 
+check_deps_humanize() {
+    if ! command -v python3 &>/dev/null; then
+        err "Missing dependency for humanize: python3"
+        return 1
+    fi
+    return 0
+}
+
 check_deps() {
     local skill="$1"
     case "$skill" in
@@ -128,6 +136,7 @@ check_deps() {
         flaresolverr)   check_deps_flaresolverr ;;
         web-clipper)    check_deps_web_clipper ;;
         garmin)         check_deps_garmin ;;
+        humanize)       check_deps_humanize ;;
         *)              return 0 ;;
     esac
 }
@@ -303,6 +312,28 @@ post_install() {
                 ok "Garmin credentials found"
             else
                 warn "No Garmin credentials — run: ~/.claude/skills/garmin/scripts/setup.sh"
+            fi
+            ;;
+
+        humanize)
+            chmod +x "$REPO_DIR/humanize/scripts/setup.sh" 2>/dev/null || true
+            chmod +x "$REPO_DIR/humanize/scripts/humanize-api.py" 2>/dev/null || true
+
+            # Set up Python venv if needed
+            if [ ! -d "$REPO_DIR/humanize/.venv" ]; then
+                info "Setting up Python virtual environment..."
+                python3 -m venv "$REPO_DIR/humanize/.venv"
+                "$REPO_DIR/humanize/.venv/bin/pip" install --upgrade pip -q
+                "$REPO_DIR/humanize/.venv/bin/pip" install -r "$REPO_DIR/humanize/requirements.txt" -q
+            else
+                ok "Python venv already exists"
+                "$REPO_DIR/humanize/.venv/bin/pip" install -r "$REPO_DIR/humanize/requirements.txt" -q 2>/dev/null || true
+            fi
+
+            if [ -f "$HOME/.humanize/config.json" ]; then
+                ok "Humanize API config found"
+            else
+                info "No commercial API configured (optional) -- run: ~/.claude/skills/humanize/scripts/setup.sh"
             fi
             ;;
     esac
