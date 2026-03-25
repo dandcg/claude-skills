@@ -2,7 +2,7 @@
 """Clip a web page to clean markdown with YAML frontmatter.
 
 Usage:
-    clip.py <url> [--tags TAG,...] [--output-dir DIR] [--force-flaresolverr]
+    clip.py <url> [--tags TAG,...] [--output-dir DIR]
 """
 
 import argparse
@@ -19,7 +19,6 @@ import yaml
 from slugify import slugify
 
 DEFAULT_CLIPS_DIR = Path.home() / "web-clips"
-FLARESOLVERR_URL = "http://localhost:8191/v1"
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -30,30 +29,6 @@ def fetch_url(url: str) -> tuple:
     """Fetch a URL and return (html, status_code)."""
     resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
     return resp.text, resp.status_code
-
-
-def fetch_with_flaresolverr(url: str, timeout_ms: int = 30000) -> str:
-    """Fetch a URL via FlareSolverr. Returns HTML or raises."""
-    resp = requests.post(
-        FLARESOLVERR_URL,
-        json={"cmd": "request.get", "url": url, "maxTimeout": timeout_ms},
-        timeout=60,
-    )
-    data = resp.json()
-    if data.get("status") != "ok":
-        raise RuntimeError(f"FlareSolverr error: {data}")
-    return data["solution"]["response"]
-
-
-def is_cloudflare_challenge(html: str, status_code: int) -> bool:
-    """Detect Cloudflare challenge pages."""
-    if status_code == 403:
-        return True
-    if "Just a moment..." in html[:2000]:
-        return True
-    if "challenge-running" in html[:5000]:
-        return True
-    return False
 
 
 def extract_article(html: str, url: str) -> dict:
@@ -159,11 +134,6 @@ def main():
         help=f"Output directory (default: {DEFAULT_CLIPS_DIR})",
     )
     parser.add_argument(
-        "--force-flaresolverr",
-        action="store_true",
-        help="Skip direct fetch, use FlareSolverr immediately",
-    )
-    parser.add_argument(
         "--format", "-f",
         choices=["text", "json"],
         default="text",
@@ -175,22 +145,10 @@ def main():
 
     # Fetch
     try:
-        if args.force_flaresolverr:
-            print("Fetching via FlareSolverr...", file=sys.stderr)
-            html = fetch_with_flaresolverr(args.url)
-            status_code = 200
-        else:
-            print(f"Fetching {args.url}...", file=sys.stderr)
-            html, status_code = fetch_url(args.url)
-
-            if is_cloudflare_challenge(html, status_code):
-                print("Cloudflare detected, falling back to FlareSolverr...", file=sys.stderr)
-                html = fetch_with_flaresolverr(args.url)
+        print(f"Fetching {args.url}...", file=sys.stderr)
+        html, status_code = fetch_url(args.url)
     except requests.RequestException as e:
         print(f"Error: Failed to fetch URL: {e}", file=sys.stderr)
-        sys.exit(1)
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Extract

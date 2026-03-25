@@ -21,7 +21,6 @@
 | 🔍 **[Repo Search](./repo-search/)** | ChromaDB semantic search across markdown, PDF, DOCX & XLSX — find by meaning, filter by area/date, build summaries |
 | 📨 **[PST to Markdown](./pst-to-markdown/)** | Extract Outlook PST archives into organised markdown with YAML frontmatter & integrity verification |
 | 📧 **[Email Search](./email-search/)** | Ingest PST archives into ChromaDB — semantic search, analytics, timelines, top contacts, export |
-| 🛡️ **[FlareSolverr](./flaresolverr/)** | Bypass Cloudflare & anti-bot protection via a real browser in Docker — scrape any protected page |
 | 📎 **[Web Clipper](./web-clipper/)** | Clip web pages to markdown with YAML frontmatter — clean extraction, Cloudflare bypass, tagging, full-text search, repo-search integration |
 | ⌚ **[Garmin](./garmin/)** | Garmin Connect health & fitness data — Body Battery, HRV, sleep, activities, VO2 max, training load/readiness, daily snapshots & weekly rollups |
 | ✍️ **[Humanize](./humanize/)** | Rewrite AI-generated text to sound natural — 4-pass prompt workflow (burstiness, perplexity, banned patterns, self-audit), optional Undetectable AI API |
@@ -70,7 +69,6 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 🔍 Repo Search | None (local only) | `repo-search/setup.sh` |
 | 📨 PST to Markdown | None (local only) | `pst-to-markdown/setup.sh` |
 | 📧 Email Search | None (local only) | `email-search/setup.sh` |
-| 🛡️ FlareSolverr | None (Docker) | Auto-managed |
 | 📎 Web Clipper | None (local only) | `web-clipper/setup.sh` |
 | ⌚ Garmin | `~/.garmin/` | `garmin/scripts/setup.sh` |
 | ✍️ Humanize | `~/.humanize/` (optional) | `humanize/scripts/setup.sh` |
@@ -84,8 +82,7 @@ No secrets are stored in this repo. Each skill externalises credentials:
 | 🔍 Repo Search | Python 3 · pip |
 | 📨 PST to Markdown | Python 3 · pip · `readpst` (optional fallback) |
 | 📧 Email Search | Python 3 · pip |
-| 🛡️ FlareSolverr | Docker |
-| 📎 Web Clipper | Python 3 · pip · Docker (optional) |
+| 📎 Web Clipper | Python 3 · pip |
 | ⌚ Garmin | Python 3 · pip |
 | ✍️ Humanize | Python 3 · pip (commercial API only) |
 

@@ -5,7 +5,6 @@ Clip any web page to clean markdown with YAML frontmatter. Search your clips loc
 ## Features
 
 - **Clean extraction** — trafilatura pulls article text, title, author, and date from any page
-- **Cloudflare bypass** — automatic fallback to FlareSolverr for protected pages
 - **Local storage** — clips saved as markdown files in `~/web-clips/`
 - **Tagging** — add tags when clipping for easy filtering
 - **Search** — full-text search across all saved clips
@@ -26,7 +25,6 @@ cd web-clipper && ./setup.sh
 ## Dependencies
 
 - Python 3
-- Docker (optional, for FlareSolverr)
 
 ## Clip Format
 
@@ -56,7 +54,6 @@ Extracted article content...
 |---------|-------------|
 | `clip.py <url>` | Clip a URL to markdown |
 | `clip.py <url> --tags "a,b"` | Clip with tags |
-| `clip.py <url> --force-flaresolverr` | Force FlareSolverr |
 | `list.py` | List all clips |
 | `list.py --domain "example.com"` | Filter by domain |
 | `list.py --tag "python"` | Filter by tag |

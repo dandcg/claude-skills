@@ -16,7 +16,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 
 # All available Claude Code skills (have SKILL.md)
-AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search flaresolverr web-clipper garmin humanize)
+AVAILABLE_SKILLS=(outlook trello repo-search pst-to-markdown email-search web-clipper garmin humanize)
 
 # Colours
 GREEN='\033[0;32m'
@@ -92,15 +92,6 @@ check_deps_email_search() {
     return 0
 }
 
-check_deps_flaresolverr() {
-    if ! command -v docker &>/dev/null; then
-        err "Missing dependency for flaresolverr: docker"
-        echo "    Install Docker Desktop and enable WSL integration"
-        return 1
-    fi
-    return 0
-}
-
 check_deps_web_clipper() {
     if ! command -v python3 &>/dev/null; then
         err "Missing dependency for web-clipper: python3"
@@ -133,7 +124,6 @@ check_deps() {
         repo-search)    check_deps_repo_search ;;
         pst-to-markdown) check_deps_pst_to_markdown ;;
         email-search)   check_deps_email_search ;;
-        flaresolverr)   check_deps_flaresolverr ;;
         web-clipper)    check_deps_web_clipper ;;
         garmin)         check_deps_garmin ;;
         humanize)       check_deps_humanize ;;
@@ -266,19 +256,6 @@ post_install() {
                 ok "Python venv already exists"
                 # Update deps quietly
                 "$REPO_DIR/email-search/.venv/bin/pip" install -e "$REPO_DIR/email-search" -q 2>/dev/null || true
-            fi
-            ;;
-
-        flaresolverr)
-            chmod +x "$REPO_DIR/flaresolverr/scripts/"*.sh 2>/dev/null || true
-
-            # Check if container exists
-            if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^flaresolverr$"; then
-                ok "FlareSolverr container is running"
-            elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^flaresolverr$"; then
-                warn "FlareSolverr container exists but is stopped — run: docker start flaresolverr"
-            else
-                warn "FlareSolverr container not created — run: ~/.claude/skills/flaresolverr/scripts/flaresolverr-ensure.sh"
             fi
             ;;
 

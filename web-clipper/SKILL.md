@@ -10,7 +10,6 @@ Save any web page as clean markdown with YAML frontmatter. Optionally search you
 ## Prerequisites
 
 - Python 3 with venv
-- Docker (optional, for FlareSolverr fallback on Cloudflare-protected sites)
 
 ## Setup
 
@@ -34,12 +33,6 @@ With tags:
 
 ```bash
 ~/.claude/skills/web-clipper/.venv/bin/python ~/.claude/skills/web-clipper/scripts/clip.py <url> --tags "python,web-dev"
-```
-
-Force FlareSolverr (for Cloudflare-protected sites):
-
-```bash
-~/.claude/skills/web-clipper/.venv/bin/python ~/.claude/skills/web-clipper/scripts/clip.py <url> --force-flaresolverr
 ```
 
 JSON output:
@@ -99,12 +92,11 @@ After ingestion, clips are searchable via repo-search:
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `Could not extract article content` | Page has no extractable article text (e.g., SPA, login wall) | Try `--force-flaresolverr` for JS-rendered pages |
-| `FlareSolverr error` | FlareSolverr container not running | Run `~/.claude/skills/flaresolverr/scripts/flaresolverr-ensure.sh` |
+| `Could not extract article content` | Page has no extractable article text (e.g., SPA, login wall) | JS-rendered pages may not be extractable |
 | `repo-search skill not found` | repo-search not installed | Run `./install.sh repo-search` |
 
 ## Limitations
 
 - Extracts article text only — does not preserve images, videos, or interactive elements
-- JavaScript-rendered SPAs may need FlareSolverr for content extraction
+- JavaScript-rendered SPAs may not be fully extractable
 - Login-walled content cannot be accessed
