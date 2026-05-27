@@ -14,7 +14,7 @@ claude-skills/
 ├── garmin/           # Garmin Connect health & fitness data (Python/garminconnect)
 ├── humanize/         # Humanize AI-generated text (prompt-driven + optional API)
 ├── gpt-image-2/      # OpenAI GPT Image 2 generation & editing (Python)
-├── deep-research/    # Multi-source web research via Bright Data SERP + Web Unlocker (Python)
+├── deep-research/    # Multi-source web research via the Bright Data CLI (Python wrapper)
 ├── install.sh        # Claude installer (symlinks into ~/.claude/skills)
 ├── install-codex.sh  # Codex installer (installs into ~/.codex/skills)
 └── README.md         # User-facing documentation
@@ -67,7 +67,7 @@ No secrets in the repo. Each skill externalises credentials:
 | Garmin | `~/.garmin/` |
 | Humanize | `~/.humanize/` (optional, for commercial API) |
 | GPT Image 2 | `$OPENAI_API_KEY` env var |
-| Deep Research | `~/.deep-research/config.env` (Bright Data SERP + Web Unlocker) |
+| Deep Research | Managed by the Bright Data CLI (`brightdata login`, or `BRIGHTDATA_API_KEY`) |
 
 ### Dependencies
 

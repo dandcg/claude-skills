@@ -134,6 +134,9 @@ check_deps_deep_research() {
         err "Missing dependency for deep-research: python3"
         return 1
     fi
+    if ! command -v brightdata &>/dev/null && ! command -v bdata &>/dev/null; then
+        warn "Bright Data CLI not found — install with: npm install -g @brightdata/cli"
+    fi
     return 0
 }
 
@@ -374,10 +377,11 @@ post_install() {
                 "$REPO_DIR/deep-research/.venv/bin/pip" install -r "$REPO_DIR/deep-research/requirements.txt" -q 2>/dev/null || true
             fi
 
-            if [ -f "$HOME/.deep-research/config.env" ] && grep -q "^BRIGHTDATA_API_TOKEN=." "$HOME/.deep-research/config.env" 2>/dev/null; then
-                ok "Bright Data credentials found"
+            if command -v brightdata &>/dev/null || command -v bdata &>/dev/null; then
+                ok "Bright Data CLI on PATH"
             else
-                warn "No Bright Data credentials — run: ~/.claude/skills/deep-research/setup.sh"
+                warn "Bright Data CLI missing — install with: npm install -g @brightdata/cli"
+                echo "    Then authenticate: brightdata login"
             fi
             ;;
     esac
